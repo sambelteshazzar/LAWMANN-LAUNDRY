@@ -24,6 +24,8 @@ const sourceSans = Source_Sans_3({
 export const metadata: Metadata = {
   title: { default: 'Lawmann Laundry', template: '%s · Lawmann Laundry' },
   description: 'Weigh, price, record, and track every bag, from the hostel to the owner’s phone.',
+  applicationName: 'Lawmann Laundry',
+  appleWebApp: { capable: true, statusBarStyle: 'default', title: 'Lawmann Laundry' },
 };
 
 export const viewport = { width: 'device-width', initialScale: 1, viewportFit: 'cover' as const, themeColor: '#115e59' };
