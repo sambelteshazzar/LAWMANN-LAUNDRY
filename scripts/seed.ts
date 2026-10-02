@@ -17,7 +17,9 @@ import { BANDS, bandFor } from '@/lib/pricing';
 import { grams } from '@/lib/money';
 import { splitTaxInclusive } from '@/lib/tax';
 import { hashPin } from '@/lib/auth';
+import { pathToFileURL } from 'node:url';
 import { acceptedMessage, readyMessage } from '@/lib/sms/templates';
+import { LOCATIONS } from '@/lib/locations';
 
 function mulberry32(seed: number): () => number {
   let a = seed;
@@ -30,26 +32,7 @@ function mulberry32(seed: number): () => number {
   };
 }
 
-const HOSTELS: Array<[string, 'campus' | 'store']> = [
-  ['Lawmann Store', 'store'],
-  ['Evandy', 'campus'],
-  ['International Student Hostel', 'campus'],
-  ['Pentagon (Blocks A & B)', 'campus'],
-  ['Vikings', 'campus'],
-  ['Bani', 'campus'],
-  ['TF Hostel', 'campus'],
-  ['Aseda Annex A', 'campus'],
-  ['Valco', 'campus'],
-  ['Dr. Hilla Limann', 'campus'],
-  ['Kwapong', 'campus'],
-  ['Elizabeth Sey', 'campus'],
-  ['Jean Nelson Aka', 'campus'],
-  ['Legon Hall', 'campus'],
-  ['Mensah Sarbah', 'campus'],
-  ['Akuafo', 'campus'],
-  ['Volta', 'campus'],
-  ['Commonwealth', 'campus'],
-];
+
 
 const STUDENTS: Array<{ phone: string; name: string; room: string }> = [
   { phone: '0241234567', name: 'Ama Serwaa', room: 'TF Block C, Room 12' },
@@ -95,6 +78,12 @@ function orderNoFor(date: Date, n: number): string {
 }
 
 async function main(): Promise<void> {
+  if (process.env.DATABASE_URL) {
+    throw new Error(
+      'seed: DATABASE_URL is set. The demo seed truncates tables, so it must never run ' +
+        'against a real database. Use npm run db:bootstrap for production.',
+    );
+  }
   await ensureBooted();
   const db = getDb();
   const rand = mulberry32(42);
@@ -110,7 +99,7 @@ async function main(): Promise<void> {
   if (!shop) throw new Error('seed: shop insert failed');
 
   const locations = new Map<string, string>();
-  for (const [name, kind] of HOSTELS) {
+  for (const [name, kind] of LOCATIONS) {
     const [loc] = await db.insert(schema.location).values({ shopId: shop.id, name, kind }).returning();
     if (!loc) throw new Error(`seed: location ${name} failed`);
     locations.set(name, loc.id);
@@ -143,7 +132,7 @@ async function main(): Promise<void> {
   const today = new Date();
   today.setUTCHours(0, 0, 0, 0);
   const dayCounters = new Map<string, number>();
-  const hostelNames = HOSTELS.filter(([, k]) => k === 'campus').map(([n]) => n);
+  const hostelNames = LOCATIONS.filter(([, k]) => k === 'campus').map(([n]) => n);
 
   let orderCount = 0;
   let smsCount = 0;
@@ -285,13 +274,15 @@ async function main(): Promise<void> {
   const shiftOpen = at(today, 8);
   await db.insert(schema.shift).values({ staffId: collectorId, openedAt: shiftOpen, float: 10000 });
 
-  console.log(`Seeded: 1 shop, ${HOSTELS.length} locations, 5 bands, 3 staff, ${STUDENTS.length} students, ${orderCount} orders, ${smsCount} queued SMS, 1 open shift.`);
+  console.log(`Seeded: 1 shop, ${LOCATIONS.length} locations, 5 bands, 3 staff, ${STUDENTS.length} students, ${orderCount} orders, ${smsCount} queued SMS, 1 open shift.`);
   console.log('PINs — Owner: 1234, Auntie Muni: 2345, Kofi: 3456.');
 }
 
-main()
-  .then(() => process.exit(0))
-  .catch((err) => {
-    console.error(err);
-    process.exit(1);
-  });
+if (import.meta.url === pathToFileURL(process.argv[1]!).href) {
+  main()
+    .then(() => process.exit(0))
+    .catch((err) => {
+      console.error(err);
+      process.exit(1);
+    });
+}
