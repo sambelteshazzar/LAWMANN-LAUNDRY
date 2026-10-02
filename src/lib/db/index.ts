@@ -1,4 +1,5 @@
 import { join } from 'node:path';
+import { setDefaultAutoSelectFamilyAttemptTimeout } from 'node:net';
 import { PGlite } from '@electric-sql/pglite';
 import pg from 'pg';
 import { drizzle as drizzleOverPglite } from 'drizzle-orm/pglite';
@@ -38,6 +39,12 @@ interface DbGlobal {
 const g = globalThis as typeof globalThis & DbGlobal;
 
 const DATABASE_URL = process.env.DATABASE_URL;
+
+// Node's Happy-Eyeballs racing gives each resolved address a 250ms attempt
+// window. High-latency links (Accra to US-East is ~300ms RTT) overrun it, so
+// node-postgres reports phantom ETIMEDOUTs on a perfectly reachable host.
+// A realistic window keeps IPv4/IPv6 racing and keeps the counter online.
+setDefaultAutoSelectFamilyAttemptTimeout(3000);
 
 // The node-postgres adapter: exec is the simple query protocol, which runs
 // multi-statement batches the way PGlite's exec does.
