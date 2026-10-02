@@ -17,7 +17,13 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
             <span className="text-lg font-extrabold tracking-tight text-stone-900">{SITE.name}</span>
             <span className="text-sm font-semibold text-teal-800">Laundry</span>
           </Link>
-          <WhatsAppButton label="Book a wash" message="Hello Lawmann, I would like to book a laundry wash." />
+          <div className="flex items-center gap-4">
+            <nav aria-label="Pages" className="hidden items-center gap-4 text-sm font-semibold text-stone-700 sm:flex">
+              <Link href="/pricing" className="min-h-12 hover:text-teal-800">Pricing</Link>
+              <Link href="/contact" className="min-h-12 hover:text-teal-800">Contact</Link>
+            </nav>
+            <WhatsAppButton label="Book a wash" message="Hello Lawmann, I would like to book a laundry wash." />
+          </div>
         </div>
       </header>
       <main className="flex-1">{children}</main>
@@ -35,8 +41,10 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
               <p className="mt-1">{SITE.hours}</p>
             </div>
           </div>
-          <div className="mt-6 border-t border-stone-200 pt-4 text-xs text-stone-500">
-            <Link href="/app/login" className="inline-flex min-h-12 items-center hover:text-stone-700">
+          <div className="mt-6 flex gap-4 border-t border-stone-200 pt-4 text-xs text-stone-500">
+            <Link href="/pricing" className="inline-flex min-h-12 items-center hover:text-stone-700">Pricing</Link>
+            <Link href="/contact" className="inline-flex min-h-12 items-center hover:text-stone-700">Contact</Link>
+            <Link href="/app/login" className="ml-auto inline-flex min-h-12 items-center hover:text-stone-700">
               Staff login
             </Link>
           </div>
