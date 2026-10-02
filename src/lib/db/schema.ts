@@ -55,6 +55,8 @@ export const costCategory = pgEnum('cost_category', [
   'maintenance',
   'other',
 ]);
+export const smsKind = pgEnum('sms_kind', ['accepted', 'ready', 'payment']);
+export const smsState = pgEnum('sms_state', ['queued', 'sent', 'failed']);
 
 export const shop = pgTable('shop', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -85,6 +87,8 @@ export const staff = pgTable(
       .references(() => shop.id, { onDelete: 'cascade' }),
     name: text('name').notNull(),
     role: staffRole('role').notNull(),
+    /** scrypt:<salt>:<hash>. Null until the owner sets a PIN; null cannot log in. */
+    pinHash: text('pin_hash'),
   },
   (t) => [unique('staff_shop_name').on(t.shopId, t.name)],
 );
@@ -126,6 +130,8 @@ export const orders = pgTable(
     studentId: uuid('student_id')
       .notNull()
       .references(() => student.id),
+    /** Which staff member took the bag. Null only for rows older than the column. */
+    recordedBy: uuid('recorded_by').references(() => staff.id),
     status: orderStatus('status').notNull().default('received'),
 
     // Mandatory on every order, including piece priced ones. The cost basis is
@@ -167,6 +173,8 @@ export const payment = pgTable(
       .references(() => orders.id, { onDelete: 'cascade' }),
     amount: money('amount_pesewa').notNull(),
     method: paymentMethod('method').notNull(),
+    /** Who took the money. Null only for rows older than the column. */
+    recordedBy: uuid('recorded_by').references(() => staff.id),
     // Claimed is not confirmed. On a personal MoMo number pending_momo is the
     // normal state, and the owner's dashboard must never mix the two.
     state: paymentState('state').notNull().default('confirmed'),
@@ -212,10 +220,60 @@ export const shift = pgTable('shift', {
   momoAtClose: money('momo_at_close_pesewa'),
 });
 
+/**
+ * The transactional outbox. A message is written queued before any send is
+ * attempted, so intent can never be lost to a dropped network. Without
+ * ARKESEL_API_KEY messages stay queued and are shown, never faked as sent.
+ */
+export const smsMessage = pgTable(
+  'sms_message',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    shopId: uuid('shop_id')
+      .notNull()
+      .references(() => shop.id, { onDelete: 'cascade' }),
+    orderId: uuid('order_id').references(() => orders.id, { onDelete: 'cascade' }),
+    kind: smsKind('kind').notNull(),
+    toPhone: text('to_phone').notNull(),
+    body: text('body').notNull(),
+    state: smsState('state').notNull().default('queued'),
+    provider: text('provider'),
+    providerRef: text('provider_ref'),
+    error: text('error'),
+    sentAt: timestamp('sent_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('sms_message_state').on(t.state, t.createdAt)],
+);
+
+/**
+ * Status moves with the mover's name. ready_at answers when; this answers who,
+ * which matters the day a student receives a "ready" message prematurely.
+ */
+export const orderEvent = pgTable(
+  'order_event',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    orderId: uuid('order_id')
+      .notNull()
+      .references(() => orders.id, { onDelete: 'cascade' }),
+    fromStatus: orderStatus('from_status').notNull(),
+    toStatus: orderStatus('to_status').notNull(),
+    staffId: uuid('staff_id')
+      .notNull()
+      .references(() => staff.id),
+    at: timestamp('at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('order_event_order').on(t.orderId, t.at)],
+);
+
 /** Column names this file expects, asserted against the live database at boot. */
 export const EXPECTED_COLUMNS = {
-  orders: ['weight_grams', 'gross_pesewa', 'base_pesewa', 'vat_pesewa', 'nhil_pesewa', 'getfund_pesewa'],
-  payment: ['amount_pesewa', 'gateway_ref', 'state'],
+  orders: ['weight_grams', 'gross_pesewa', 'base_pesewa', 'vat_pesewa', 'nhil_pesewa', 'getfund_pesewa', 'recorded_by'],
+  payment: ['amount_pesewa', 'gateway_ref', 'state', 'recorded_by'],
+  staff: ['pin_hash'],
+  sms_message: ['kind', 'state', 'to_phone', 'body', 'sent_at'],
+  order_event: ['from_status', 'to_status', 'staff_id', 'at'],
 } as const satisfies Record<string, readonly string[]>;
 
 export const moneyColumn = sql`bigint`;

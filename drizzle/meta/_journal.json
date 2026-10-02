@@ -8,6 +8,13 @@
       "when": 1790455741055,
       "tag": "0000_init",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1790594791610,
+      "tag": "0001_auth_accountability_outbox",
+      "breakpoints": true
     }
   ]
 }
