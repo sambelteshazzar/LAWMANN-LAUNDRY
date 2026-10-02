@@ -29,9 +29,21 @@ export function Section({ title, children }: { title?: string; children: ReactNo
   );
 }
 
-export function Stat({ label, value, sub }: { label: string; value: ReactNode; sub?: string }) {
+type StatTone = 'default' | 'amber' | 'red';
+
+const STAT_TONES: Record<StatTone, string> = {
+  default: 'border-stone-200 bg-white',
+  amber: 'border-amber-300 bg-amber-50',
+  red: 'border-red-200 bg-red-50',
+};
+
+export function StatCard({ tone = 'default' }: { tone?: StatTone }) {
+  return `rounded-lg border p-4 ${STAT_TONES[tone]}`;
+}
+
+export function Stat({ label, value, sub, tone = 'default' }: { label: string; value: ReactNode; sub?: ReactNode; tone?: StatTone }) {
   return (
-    <div className="rounded-lg border border-stone-200 bg-white p-4">
+    <div className={StatCard({ tone })}>
       <div className="text-sm text-stone-500">{label}</div>
       <div className="mt-1 text-2xl font-bold tabular-nums text-stone-900">{value}</div>
       {sub ? <div className="mt-1 text-sm text-stone-500">{sub}</div> : null}

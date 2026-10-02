@@ -10,7 +10,7 @@ import { sendAllAction } from '@/app/actions/ops';
 export const metadata = { title: 'Messages · Lawmann Laundry' };
 
 function formatDate(d: Date | null): string {
-  if (!d) return '—';
+  if (!d) return '-';
   return d.toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 }
 
@@ -37,7 +37,7 @@ export default async function MessagesPage() {
           <p className="mt-1 text-sm text-amber-800">
             {waiting === 0
               ? 'Messages are being recorded and will send once the owner adds the Arkesel key.'
-              : `${waiting} ${waiting === 1 ? 'message is' : 'messages are'} waiting — they will send themselves once the owner adds the Arkesel key.`}
+              : `${waiting} ${waiting === 1 ? 'message is' : 'messages are'} waiting; they will send themselves once the owner adds the Arkesel key.`}
           </p>
         </div>
       ) : null}

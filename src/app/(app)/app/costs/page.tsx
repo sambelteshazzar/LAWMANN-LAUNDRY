@@ -44,7 +44,7 @@ export default async function CostsPage() {
 
   return (
     <Page>
-      <PageTitle title="Costs" hint="Enter the bills once a week. Gas, power, water, detergent, wages — from the receipts." />
+      <PageTitle title="Costs" hint="Enter the bills once a week. Gas, power, water, detergent, wages, straight from the receipts." />
       <Section title="Record a bill">
         <ActionForm action={addCostAction}>
           <div className="grid grid-cols-2 gap-3">

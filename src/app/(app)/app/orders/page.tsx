@@ -34,7 +34,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
         <PageTitle title="Orders" hint={filter === 'open' ? 'Bags still in the shop.' : undefined} />
         <Link
           href="/app/orders/new"
-          className="inline-flex min-h-12 shrink-0 items-center gap-1.5 rounded-md bg-teal-700 px-4 font-semibold text-white"
+          className="inline-flex min-h-12 shrink-0 items-center gap-1.5 rounded-md bg-teal-800 px-4 font-semibold text-white"
         >
           <PlusIcon className="h-5 w-5" />
           New bag

@@ -5,7 +5,7 @@ import { getSession } from '@/lib/session';
 import { bandMix, costPerKilo, revenueInRange, taxSummary, type Range } from '@/lib/reports';
 import { thinnestBand } from '@/lib/pricing';
 import { moneyShort, weightLabel } from '@/lib/money';
-import { EmptyState, Money, Page, PageTitle, Section } from '@/components/ui';
+import { EmptyState, Money, Page, PageTitle, Section, Stat, StatCard } from '@/components/ui';
 
 export const metadata = { title: 'Reports · Lawmann Laundry' };
 
@@ -71,12 +71,12 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
     kilo.perKiloPesewa === null
       ? 'Nothing was washed in this period, so there is no cost per kilo to judge.'
       : kilo.perKiloPesewa < thinnest.perKg
-        ? `Your cost per kilo is ${moneyShort(kilo.perKiloPesewa)}. Every band earns above that — including the thinnest, ${thinnest.band.label} at ${moneyShort(thinnest.perKg)} per kilo.`
+        ? `Your cost per kilo is ${moneyShort(kilo.perKiloPesewa)}. Every band earns above that, including the thinnest, ${thinnest.band.label} at ${moneyShort(thinnest.perKg)} per kilo.`
         : `Your cost per kilo is ${moneyShort(kilo.perKiloPesewa)}, above the ${thinnest.band.label} band's ${moneyShort(thinnest.perKg)} per kilo. That band is losing money on every full bag.`;
 
   return (
     <Page>
-      <PageTitle title="Reports" hint="What you made — not just what came in." />
+      <PageTitle title="Reports" hint="What you made, not just what came in." />
       <div className="no-print mb-4 flex gap-1 overflow-x-auto" role="tablist" aria-label="Report ranges">
         {RANGES.map((r) => {
           const active = key === r.key;
@@ -97,22 +97,17 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
       </div>
 
       <div className="mb-4 grid grid-cols-2 gap-3">
-        <div className="rounded-lg border border-stone-200 bg-white p-4">
-          <div className="text-sm text-stone-500">Revenue {label}</div>
-          <div className="mt-1 text-2xl font-bold tabular-nums">
-            <Money pesewas={revenue.confirmedPesewa} />
-          </div>
-          <div className="mt-1 text-sm text-stone-500">{revenue.confirmedCount} payments</div>
-        </div>
-        <div className={`rounded-lg border p-4 ${profit < 0 ? 'border-red-200 bg-red-50' : 'border-stone-200 bg-white'}`}>
-          <div className="text-sm text-stone-500">Made {label}</div>
-          <div className="mt-1 text-2xl font-bold tabular-nums">
-            <Money pesewas={profit} />
-          </div>
-          <div className="mt-1 text-sm text-stone-500">
-            after <Money pesewas={kilo.costPesewa} short /> costs
-          </div>
-        </div>
+        <Stat label={`Revenue ${label}`} value={<Money pesewas={revenue.confirmedPesewa} />} sub={`${revenue.confirmedCount} payments`} />
+        <Stat
+          label={`Made ${label}`}
+          value={<Money pesewas={profit} />}
+          sub={
+            <>
+              after <Money pesewas={kilo.costPesewa} short /> costs
+            </>
+          }
+          tone={profit < 0 ? 'red' : 'default'}
+        />
       </div>
 
       <Section title={`Cost per kilo ${label}`}>
@@ -167,7 +162,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
         )}
       </Section>
 
-      <Section title={`Tax ${label} — for the return`}>
+      <Section title={`Tax ${label}, for the return`}>
         <dl className="space-y-1 text-sm">
           <div className="flex justify-between gap-3">
             <dt className="text-stone-500">Tax value (base)</dt>
@@ -194,7 +189,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
             </dd>
           </div>
         </dl>
-        <p className="mt-2 text-xs text-stone-500">Stored per order at creation, never recomputed — a rate change cannot rewrite a filed return.</p>
+        <p className="mt-2 text-xs text-stone-500">Stored per order at creation, never recomputed, so a rate change cannot rewrite a filed return.</p>
       </Section>
     </Page>
   );

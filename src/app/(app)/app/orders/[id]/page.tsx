@@ -25,14 +25,14 @@ const NEXT_MOVES: Partial<Record<OrderStatus, Array<{ to: OrderStatus; label: st
     { to: 'cancelled', label: 'Cancel' },
   ],
   washing: [
-    { to: 'ready', label: 'Mark ready — texts the student' },
+    { to: 'ready', label: 'Mark ready, texts the student' },
     { to: 'cancelled', label: 'Cancel' },
   ],
-  ready: [{ to: 'collected', label: 'Hand over — collect the balance' }],
+  ready: [{ to: 'collected', label: 'Hand over, collect the balance' }],
 };
 
 function formatDate(d: Date | null): string {
-  if (!d) return '—';
+  if (!d) return '-';
   return d.toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 }
 
@@ -183,7 +183,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
                 <p className="text-stone-800">{m.body}</p>
                 <p className="mt-1 flex items-center gap-2 text-xs text-stone-500">
                   <Badge tone={m.state === 'sent' ? 'green' : m.state === 'failed' ? 'red' : 'stone'}>
-                    {m.state === 'sent' ? 'Sent' : m.state === 'failed' ? `Failed — ${m.error ?? 'unknown reason'}` : 'Waiting for gateway'}
+                    {m.state === 'sent' ? 'Sent' : m.state === 'failed' ? `Failed: ${m.error ?? 'unknown reason'}` : 'Waiting for gateway'}
                   </Badge>
                   {formatDate(m.createdAt)}
                 </p>

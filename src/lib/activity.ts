@@ -103,16 +103,16 @@ function formatItem(r: FeedRow): ActivityItem {
       text = `${who} marked ${r.order_no} ${r.detail ?? ''}`.trim();
       break;
     case 'payment':
-      text = `${who} took ${moneyShort(Number(r.amount_pesewa ?? 0))} ${r.detail ?? ''} — ${r.order_no}`;
+      text = `${who} took ${moneyShort(Number(r.amount_pesewa ?? 0))} ${r.detail ?? ''} ${r.order_no}`;
       break;
     case 'cost':
-      text = `Cost entered — ${r.detail ?? 'cost'} ${moneyShort(Number(r.amount_pesewa ?? 0))}`;
+      text = `Cost entered: ${r.detail ?? 'cost'} ${moneyShort(Number(r.amount_pesewa ?? 0))}`;
       break;
     case 'shift':
       text =
         r.detail === 'opened'
-          ? `${who} opened shift — float ${moneyShort(Number(r.amount_pesewa ?? 0))}`
-          : `${who} closed shift — counted ${moneyShort(Number(r.amount_pesewa ?? 0))}`;
+          ? `${who} opened shift, float ${moneyShort(Number(r.amount_pesewa ?? 0))}`
+          : `${who} closed shift, counted ${moneyShort(Number(r.amount_pesewa ?? 0))}`;
       break;
     case 'sms':
       text = `SMS ${r.detail ?? ''}`.trim();

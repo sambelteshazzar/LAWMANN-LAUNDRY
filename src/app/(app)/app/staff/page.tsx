@@ -37,13 +37,13 @@ export default async function StaffPage() {
                   </p>
                 </div>
                 <span className={`text-xs font-semibold ${s.pinHash ? 'text-green-700' : 'text-red-700'}`}>
-                  {s.pinHash ? 'PIN set' : 'No PIN — cannot log in'}
+                  {s.pinHash ? 'PIN set' : 'No PIN, cannot log in'}
                 </span>
               </div>
               <ActionForm action={resetPinAction}>
                 <input type="hidden" name="staffId" value={s.id} />
                 <div className="mt-2 flex gap-2">
-                  <TextInput name="pin" inputMode="numeric" maxLength={8} required placeholder="New 4–8 digit PIN" aria-label={`New PIN for ${s.name}`} />
+                  <TextInput name="pin" inputMode="numeric" maxLength={8} required placeholder="New 4 to 8 digit PIN" aria-label={`New PIN for ${s.name}`} />
                   <div className="w-32 shrink-0">
                     <SecondaryButton>Set PIN</SecondaryButton>
                   </div>
@@ -61,13 +61,13 @@ export default async function StaffPage() {
           <div className="grid grid-cols-2 gap-3">
             <Field label="Role" htmlFor="role">
               <SelectInput id="role" name="role" required defaultValue="collector">
-                <option value="collector">Collector — intake only</option>
-                <option value="counter">Counter — intake, money, shifts</option>
-                <option value="owner">Owner — everything</option>
+                <option value="collector">Collector (intake only)</option>
+                <option value="counter">Counter (intake, money, shifts)</option>
+                <option value="owner">Owner (everything)</option>
               </SelectInput>
             </Field>
             <Field label="PIN" htmlFor="pin">
-              <TextInput id="pin" name="pin" inputMode="numeric" maxLength={8} required placeholder="4–8 digits" />
+              <TextInput id="pin" name="pin" inputMode="numeric" maxLength={8} required placeholder="4 to 8 digits" />
             </Field>
           </div>
           <PrimaryButton>Add staff</PrimaryButton>

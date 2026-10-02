@@ -64,7 +64,7 @@ export default async function ActivityPage({ searchParams }: { searchParams: Pro
 
   return (
     <Page>
-      <PageTitle title="Activity" hint="Everything that happened, newest first — read straight from the books." />
+      <PageTitle title="Activity" hint="Everything that happened, newest first, read straight from the books." />
       <Section>
         <form method="get" className="grid grid-cols-2 gap-3">
           <Field label="Day" htmlFor="day">

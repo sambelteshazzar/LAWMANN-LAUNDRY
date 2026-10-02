@@ -5,7 +5,7 @@ import { getSession } from '@/lib/session';
 import { arrearsList, intakeCounts, moneyToday, statusCounts } from '@/lib/reports';
 import { currentShift } from '@/lib/shifts';
 import { listCosts } from '@/lib/costs';
-import { EmptyState, Money, Page, Section, StatusBadge, ageLabel } from '@/components/ui';
+import { EmptyState, Money, Page, Section, Stat, StatCard, StatusBadge, ageLabel } from '@/components/ui';
 
 export const metadata = { title: 'Home · Lawmann Laundry' };
 
@@ -49,32 +49,26 @@ export default async function DashboardPage() {
       </div>
 
       <div className="mb-4 grid grid-cols-2 gap-3">
-        <div className="rounded-lg border border-stone-200 bg-white p-4">
-          <div className="text-sm text-stone-500">Money in today</div>
-          <div className="mt-1 text-2xl font-bold tabular-nums text-stone-900">
-            <Money pesewas={money.confirmedPesewa} />
-          </div>
-          <div className="mt-1 text-sm text-stone-500">
-            {money.confirmedCount === 1 ? '1 payment' : `${money.confirmedCount} payments`}
-          </div>
-        </div>
-        <div className={`rounded-lg border p-4 ${money.pendingCount > 0 ? 'border-amber-300 bg-amber-50' : 'border-stone-200 bg-white'}`}>
-          <div className="text-sm text-stone-500">MoMo claimed, not confirmed</div>
-          <div className="mt-1 text-2xl font-bold tabular-nums text-stone-900">
-            <Money pesewas={money.pendingPesewa} />
-          </div>
-          <div className="mt-1 text-sm text-stone-500">
-            {money.pendingCount === 0 ? 'nothing waiting' : `${money.pendingCount} waiting on you`}
-          </div>
-        </div>
-        <div className="rounded-lg border border-stone-200 bg-white p-4">
-          <div className="text-sm text-stone-500">Bags in</div>
-          <div className="mt-1 text-2xl font-bold tabular-nums text-stone-900">{counts.day}</div>
-          <div className="mt-1 text-sm text-stone-500">
-            {counts.week} this week · {counts.month} this month
-          </div>
-        </div>
-        <Link href="/app/arrears" className={`rounded-lg border p-4 ${owingTotal > 0 ? 'border-red-200 bg-red-50' : 'border-stone-200 bg-white'}`}>
+        <Stat
+          label="Money in today"
+          value={<Money pesewas={money.confirmedPesewa} />}
+          sub={money.confirmedCount === 1 ? '1 payment' : `${money.confirmedCount} payments`}
+        />
+        <Stat
+          label="MoMo claimed, not confirmed"
+          value={<Money pesewas={money.pendingPesewa} />}
+          sub={money.pendingCount === 0 ? 'nothing waiting' : `${money.pendingCount} waiting on you`}
+          tone={money.pendingCount > 0 ? 'amber' : 'default'}
+        />
+        <Stat
+          label="Bags in"
+          value={counts.day}
+          sub={`${counts.week} this week · ${counts.month} this month`}
+        />
+        <Link
+          href="/app/arrears"
+          className={`${StatCard({ tone: owingTotal > 0 ? 'red' : 'default' })} block text-left`}
+        >
           <div className="text-sm text-stone-500">Still owing</div>
           <div className="mt-1 text-2xl font-bold tabular-nums text-stone-900">
             <Money pesewas={owingTotal} />
@@ -135,7 +129,7 @@ export default async function DashboardPage() {
         {shift ? (
           <div className="flex items-center justify-between gap-3">
             <p className="text-sm text-stone-700">
-              Shift open — {shift.staffName}, float <Money pesewas={shift.float} />, since {formatTime(shift.openedAt)}
+              Shift open: {shift.staffName}, float <Money pesewas={shift.float} />, since {formatTime(shift.openedAt)}
             </p>
             <Link href="/app/shifts" className="inline-flex min-h-12 shrink-0 items-center rounded-md border border-stone-300 px-3 text-sm font-semibold">
               Close

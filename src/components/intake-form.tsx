@@ -112,7 +112,7 @@ function IntakeFormInner({ lists, onAnother }: { lists: IntakeLists; onAnother: 
           <button
             type="button"
             onClick={onAnother}
-            className="inline-flex min-h-12 items-center justify-center rounded-md bg-teal-700 px-5 font-semibold text-white"
+            className="inline-flex min-h-12 items-center justify-center rounded-md bg-teal-800 px-5 font-semibold text-white"
           >
             Take another bag
           </button>
@@ -158,8 +158,8 @@ function IntakeFormInner({ lists, onAnother }: { lists: IntakeLists; onAnother: 
             Returning: {lookup.name ?? 'no name recorded'}
             {lookup.room ? ` · ${lookup.room}` : ''}
             {(lookup.openBalancePesewa ?? 0) > 0
-              ? ` — owes ${moneyShort(lookup.openBalancePesewa!)}${lookup.oldestOrderNo ? ` from ${lookup.oldestOrderNo}` : ''}`
-              : ' — nothing owing.'}
+              ? `, owes ${moneyShort(lookup.openBalancePesewa!)}${lookup.oldestOrderNo ? ` from ${lookup.oldestOrderNo}` : ''}`
+              : ', nothing owing.'}
           </div>
         ) : null}
         <div className="grid grid-cols-2 gap-3">
@@ -208,7 +208,7 @@ function IntakeFormInner({ lists, onAnother }: { lists: IntakeLists; onAnother: 
             </button>
           ))}
         </div>
-        <Field label="Weight in kilos" htmlFor="weightKg" hint="From the scale. Weigh every bag, even item-priced ones — the cost basis is per kilo.">
+        <Field label="Weight in kilos" htmlFor="weightKg" hint="From the scale. Weigh every bag, even item-priced ones, because the cost basis is per kilo.">
           <TextInput
             id="weightKg"
             name="weightKg"
@@ -229,7 +229,7 @@ function IntakeFormInner({ lists, onAnother }: { lists: IntakeLists; onAnother: 
         ) : null}
         {overweight ? (
           <p role="alert" className="mb-1 rounded-md bg-red-50 px-3 py-2 text-sm font-medium text-red-800">
-            No price covers {grams! / 1000}kg. The price list stops at {ceilingKg}kg — ask the owner before recording this bag.
+            No price covers {grams! / 1000}kg. The price list stops at {ceilingKg}kg, so ask the owner before recording this bag.
           </p>
         ) : null}
         {method === 'piece' ? (
@@ -331,15 +331,15 @@ function IntakeFormInner({ lists, onAnother }: { lists: IntakeLists; onAnother: 
         <dl className="mb-4 space-y-1 text-sm">
           <div className="flex justify-between">
             <dt className="text-stone-500">Price</dt>
-            <dd className="font-bold tabular-nums">{gross !== null ? moneyShort(gross) : '—'}</dd>
+            <dd className="font-bold tabular-nums">{gross !== null ? moneyShort(gross) : '-'}</dd>
           </div>
           <div className="flex justify-between">
             <dt className="text-stone-500">Paid now</dt>
-            <dd className="tabular-nums">{payChoice === 'none' ? moneyShort(0) : amountGhs ? `GH¢${amountGhs}` : '—'}</dd>
+            <dd className="tabular-nums">{payChoice === 'none' ? moneyShort(0) : amountGhs ? `GH¢${amountGhs}` : '-'}</dd>
           </div>
           <div className="flex justify-between border-t border-stone-200 pt-1 text-base">
             <dt className="font-semibold">Still owing</dt>
-            <dd className="font-bold tabular-nums">{balance !== null ? moneyShort(Math.max(0, balance)) : '—'}</dd>
+            <dd className="font-bold tabular-nums">{balance !== null ? moneyShort(Math.max(0, balance)) : '-'}</dd>
           </div>
         </dl>
         <FormError error={state.ok ? undefined : state.error} />
@@ -358,13 +358,13 @@ function IntakeFormInner({ lists, onAnother }: { lists: IntakeLists; onAnother: 
             disabled
             className="inline-flex min-h-12 w-full cursor-not-allowed items-center justify-center rounded-md bg-stone-200 px-5 font-semibold text-stone-500"
           >
-            No price — ask the owner
+            No price, ask the owner
           </button>
         ) : (
           <PrimaryButton>Record this bag</PrimaryButton>
         )}
         {!state.ok && !state.error ? null : !state.ok && !state.orderId ? (
-          <p className="mt-2 text-center text-sm text-stone-500">Not saved — tap again to retry. Retries never duplicate the bag.</p>
+          <p className="mt-2 text-center text-sm text-stone-500">Not saved, tap again to retry. Retries never duplicate the bag.</p>
         ) : null}
       </Section>
     </form>

@@ -15,7 +15,7 @@ import { BackIcon } from '@/components/icons';
  */
 
 function formatDate(d: Date | null): string {
-  if (!d) return '—';
+  if (!d) return '-';
   return d.toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 

@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { Role } from '@/lib/auth';
+import { LogoMark } from '@/components/logo';
 import {
   ActivityIcon,
   ArrearsIcon,
@@ -86,9 +87,12 @@ export function SideNav({ role, staffName }: { role: Role; staffName: string }) 
   const allowed = NAV_ITEMS.filter((item) => item.roles.includes(role) && item.href !== '/app/menu');
   return (
     <nav aria-label="Primary" className="no-print hidden w-56 shrink-0 flex-col gap-1 md:flex">
-      <div className="mb-2 px-2">
-        <p className="text-sm font-bold text-stone-900">Lawmann Laundry</p>
-        <p className="text-xs text-stone-500">{staffName}</p>
+      <div className="mb-3 flex items-center gap-2 px-2">
+        <LogoMark className="h-7 w-7 shrink-0 text-teal-800" />
+        <div className="min-w-0">
+          <p className="truncate text-sm font-bold text-stone-900">Lawmann Laundry</p>
+          <p className="truncate text-xs text-stone-500">{staffName}</p>
+        </div>
       </div>
       {allowed.map((item) => {
         const active = isActive(pathname, item.href);

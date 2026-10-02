@@ -25,7 +25,7 @@ export default async function ArrearsPage() {
     <Page>
       <PageTitle
         title="Still owing"
-        hint={arrears.length === 0 ? undefined : `${money(total)} across ${arrears.length} ${arrears.length === 1 ? 'order' : 'orders'} — oldest first.`}
+        hint={arrears.length === 0 ? undefined : `${money(total)} across ${arrears.length} ${arrears.length === 1 ? 'order' : 'orders'}, oldest first.`}
       />
       {arrears.length === 0 ? (
         <EmptyState title="Nobody owes anything." hint="Every open order is settled in full." />

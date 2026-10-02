@@ -15,7 +15,7 @@ const base =
 export function PrimaryButton({ children }: { children: React.ReactNode }) {
   const { pending } = useFormStatus();
   return (
-    <button type="submit" disabled={pending} className={`${base} w-full bg-teal-700 text-white hover:bg-teal-800`}>
+    <button type="submit" disabled={pending} className={`${base} w-full bg-teal-800 text-white hover:bg-teal-900`}>
       {pending ? 'Saving…' : children}
     </button>
   );

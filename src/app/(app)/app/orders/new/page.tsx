@@ -16,7 +16,7 @@ export default async function NewOrderPage() {
   const lists: IntakeLists = { locations, bands };
   return (
     <Page>
-      <PageTitle title="New bag" hint="Student, scale, price, money — in that order." />
+      <PageTitle title="New bag" hint="Student, scale, price, money, in that order." />
       <IntakeForm lists={lists} />
     </Page>
   );
