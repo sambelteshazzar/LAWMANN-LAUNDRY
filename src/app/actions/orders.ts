@@ -1,10 +1,20 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { z } from 'zod';
 import { getDb, ensureBooted } from '@/lib/db';
 import { requireSession } from '@/lib/session';
-import { createOrder, findStudentByPhone } from '@/lib/orders';
-import { intakeSchema, normalizePhone } from '@/lib/validation';
+import {
+  advanceStatus,
+  cancelOrder,
+  confirmMomoPayment,
+  createOrder,
+  findStudentByPhone,
+  takePayment,
+  type OrderStatus,
+} from '@/lib/orders';
+import { intakeSchema, normalizePhone, paymentSchema } from '@/lib/validation';
+import type { ActionState } from './auth';
 
 export interface CreateOrderState {
   ok: boolean;
@@ -95,4 +105,90 @@ export async function lookupStudentAction(phone: string): Promise<StudentLookupR
     openBalancePesewa: lookup.openBalancePesewa,
     oldestOrderNo: lookup.oldestOpen?.orderNo ?? null,
   };
+}
+
+const statusSchema = z.enum(['received', 'washing', 'ready', 'collected', 'cancelled']);
+
+function refreshOrder(orderId: string): void {
+  revalidatePath(`/orders/${orderId}`);
+  revalidatePath('/orders');
+  revalidatePath('/arrears');
+  revalidatePath('/messages');
+  revalidatePath('/activity');
+  revalidatePath('/');
+}
+
+export async function advanceStatusAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  let session;
+  try {
+    session = await requireSession();
+  } catch {
+    return { ok: false, error: 'Sign in again.' };
+  }
+  const orderId = String(formData.get('orderId') ?? '');
+  const to = statusSchema.safeParse(formData.get('to'));
+  if (!orderId || !to.success) return { ok: false, error: 'That move is not valid.' };
+  await ensureBooted();
+  const result = await advanceStatus(getDb(), orderId, to.data as OrderStatus, session);
+  if (!result.ok) return { ok: false, error: result.error };
+  refreshOrder(orderId);
+  return { ok: true };
+}
+
+export async function takePaymentAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  let session;
+  try {
+    session = await requireSession();
+  } catch {
+    return { ok: false, error: 'Sign in again.' };
+  }
+  const gatewayRaw = formData.get('gatewayRef');
+  const parsed = paymentSchema.safeParse({
+    orderId: formData.get('orderId'),
+    method: formData.get('method'),
+    amount: formData.get('amount'),
+    gatewayRef: typeof gatewayRaw === 'string' && gatewayRaw.trim() ? gatewayRaw : undefined,
+  });
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? 'Check the payment.' };
+  }
+  await ensureBooted();
+  const result = await takePayment(getDb(), parsed.data.orderId, parsed.data, session);
+  if (!result.ok) return { ok: false, error: result.error };
+  refreshOrder(parsed.data.orderId);
+  return { ok: true };
+}
+
+export async function confirmMomoAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  let session;
+  try {
+    session = await requireSession();
+  } catch {
+    return { ok: false, error: 'Sign in again.' };
+  }
+  if (session.role === 'collector') return { ok: false, error: 'Only the counter or owner confirms MoMo.' };
+  const paymentId = String(formData.get('paymentId') ?? '');
+  if (!paymentId) return { ok: false, error: 'Pick a payment first.' };
+  await ensureBooted();
+  const result = await confirmMomoPayment(getDb(), paymentId, session);
+  if (!result.ok) return { ok: false, error: result.error };
+  refreshOrder(result.orderId);
+  return { ok: true };
+}
+
+export async function cancelOrderAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  let session;
+  try {
+    session = await requireSession();
+  } catch {
+    return { ok: false, error: 'Sign in again.' };
+  }
+  if (session.role === 'collector') return { ok: false, error: 'Only the counter or owner cancels an order.' };
+  const orderId = String(formData.get('orderId') ?? '');
+  if (!orderId) return { ok: false, error: 'Pick an order first.' };
+  await ensureBooted();
+  const result = await cancelOrder(getDb(), orderId, session);
+  if (!result.ok) return { ok: false, error: result.error };
+  refreshOrder(orderId);
+  return { ok: true };
 }
