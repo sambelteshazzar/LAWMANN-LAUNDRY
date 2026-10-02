@@ -97,7 +97,7 @@ export async function sendAllAction(_prev: ActionState): Promise<ActionState> {
   } catch {
     return { ok: false, error: 'Sign in again.' };
   }
-  if (session.role === 'collector') return { ok: false, error: 'Only the counter or owner sends messages.' };
+  if (session.role !== 'counter') return { ok: false, error: 'Sending is the counter’s job.' };
   await ensureBooted();
   await sendQueued(getDb());
   refreshOps();
