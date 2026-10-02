@@ -16,3 +16,5 @@ coverage/
 .idea/
 .pglite/
 .neon
+.vercel
+.env*
