@@ -117,6 +117,28 @@ gas-expensive band to actually run.
 
 ---
 
+## Since the first build (added 28 September 2026)
+
+The app now runs end to end on demo data. Three things need the owner before
+the demonstration, and one decision needs making:
+
+- **Arkesel account.** Register at arkesel.com, top up ~GH¢50, request the
+  "Lawmann" sender ID, and hand over the API key. Until then the app records
+  every message and shows exactly what each student would receive — nothing
+  sends, nothing is faked.
+- **Demo PINs.** Owner 1234, counter 2345, collector 3456. Change them at
+  handover, on the Staff page.
+- **SESSION_SECRET.** One long random string in the demo environment before
+  the owner touches it.
+- **Decision: what the demo runs on.** The demo database is embedded
+  Postgres in a file. It is fast and needs no setup, but an unclean shutdown
+  (power cut, killed process) can lose the day's entries — the notebook stays
+  the backup for the first term regardless. The production path is the
+  docker-compose Postgres in infra/, which commits durably. Decide before the
+  demo date whether the demo runs on the file or the server database.
+
+---
+
 ## Not for the meeting
 
 Cost of building. Do not quote a number until scope is agreed. The proposal already

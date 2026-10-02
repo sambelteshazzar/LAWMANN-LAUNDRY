@@ -54,6 +54,23 @@ export interface ShiftClose {
   variancePesewa: number;
 }
 
+async function expectedCash(db: Db, shopId: string, openedAt: Date, at: Date): Promise<number> {
+  const cash = await db
+    .select({ total: sql<string | number | null>`sum(${schema.payment.amount})` })
+    .from(schema.payment)
+    .innerJoin(schema.orders, eq(schema.payment.orderId, schema.orders.id))
+    .where(
+      and(
+        eq(schema.orders.shopId, shopId),
+        eq(schema.payment.method, 'cash'),
+        eq(schema.payment.state, 'confirmed'),
+        sql`${schema.payment.paidAt} >= ${openedAt}`,
+        sql`${schema.payment.paidAt} <= ${at}`,
+      ),
+    );
+  return Number(cash[0]?.total ?? 0);
+}
+
 export async function closeShift(
   db: Db,
   shiftId: string,
@@ -70,21 +87,7 @@ export async function closeShift(
   if (found.shift.closedAt) return { ok: false, error: 'That shift is already closed.' };
 
   const now = new Date();
-  const cash = await db
-    .select({ total: sql<string | null>`sum(${schema.payment.amount})` })
-    .from(schema.payment)
-    .innerJoin(schema.orders, eq(schema.payment.orderId, schema.orders.id))
-    .where(
-      and(
-        eq(schema.orders.shopId, session.shopId),
-        eq(schema.payment.method, 'cash'),
-        eq(schema.payment.state, 'confirmed'),
-        sql`${schema.payment.paidAt} >= ${found.shift.openedAt}`,
-        sql`${schema.payment.paidAt} <= ${now}`,
-      ),
-    );
-  const cashTaken = Number(cash[0]?.total ?? 0);
-  const expected = found.shift.float + cashTaken;
+  const expected = found.shift.float + (await expectedCash(db, session.shopId, found.shift.openedAt, now));
   const counted = input.counted;
 
   await db
@@ -93,4 +96,34 @@ export async function closeShift(
     .where(eq(schema.shift.id, shiftId));
 
   return { ok: true, close: { countedPesewa: counted, expectedPesewa: expected, variancePesewa: counted - expected } };
+}
+
+export interface ClosedShiftCard {
+  staffName: string;
+  closedAt: Date;
+  countedPesewa: number;
+  expectedPesewa: number;
+  variancePesewa: number;
+}
+
+/** The most recently closed shift, with its variance recomputed for display. */
+export async function lastClosedShift(db: Db, shopId: string): Promise<ClosedShiftCard | null> {
+  const rows = await db
+    .select({ shift: schema.shift, staffName: schema.staff.name })
+    .from(schema.shift)
+    .innerJoin(schema.staff, eq(schema.shift.staffId, schema.staff.id))
+    .where(and(eq(schema.staff.shopId, shopId), sql`${schema.shift.closedAt} IS NOT NULL`))
+    .orderBy(desc(schema.shift.closedAt))
+    .limit(1);
+  const found = rows[0];
+  if (!found?.shift.closedAt || found.shift.counted === null) return null;
+  const expected =
+    found.shift.float + (await expectedCash(db, shopId, found.shift.openedAt, found.shift.closedAt));
+  return {
+    staffName: found.staffName,
+    closedAt: found.shift.closedAt,
+    countedPesewa: found.shift.counted,
+    expectedPesewa: expected,
+    variancePesewa: found.shift.counted - expected,
+  };
 }

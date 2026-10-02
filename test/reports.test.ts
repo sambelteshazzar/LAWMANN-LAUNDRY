@@ -6,7 +6,7 @@ import { BANDS } from '@/lib/pricing';
 import { splitTaxInclusive } from '@/lib/tax';
 import type { Session } from '@/lib/auth';
 import { addCost, listCosts } from '@/lib/costs';
-import { closeShift, currentShift, openShift } from '@/lib/shifts';
+import { closeShift, currentShift, lastClosedShift, openShift } from '@/lib/shifts';
 import {
   arrearsList,
   bandMix,
@@ -202,6 +202,14 @@ describe('shifts', () => {
     await closeShift(db, current!.id, { counted: 19300 }, session);
     const again = await closeShift(db, current!.id, { counted: 19300 }, session);
     expect(again.ok).toBe(false);
+  });
+
+  it('the last closed shift keeps its recomputed variance for display', async () => {
+    expect(await lastClosedShift(db, fx.shopId)).toBeNull();
+    const current = await currentShift(db, fx.shopId);
+    await closeShift(db, current!.id, { counted: 19000 }, session);
+    const last = await lastClosedShift(db, fx.shopId);
+    expect(last).toMatchObject({ staffName: 'Owner', countedPesewa: 19000, expectedPesewa: 19300, variancePesewa: -300 });
   });
 });
 
