@@ -13,6 +13,7 @@ import {
   costPerKilo,
   intakeCounts,
   moneyToday,
+  revenueInRange,
   statusCounts,
   taxSummary,
 } from '@/lib/reports';
@@ -110,6 +111,13 @@ describe('intakeCounts', () => {
     expect(counts.day).toBe(1);
     expect(counts.week).toBe(1);
     expect(counts.month).toBe(3);
+  });
+});
+
+describe('revenueInRange', () => {
+  it('sums confirmed payments inside the range', async () => {
+    const revenue = await revenueInRange(db, fx.shopId, MONTH);
+    expect(revenue).toEqual({ confirmedPesewa: 19600, confirmedCount: 3 });
   });
 });
 

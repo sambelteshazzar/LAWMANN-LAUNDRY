@@ -1,6 +1,8 @@
 'use client';
 
+import { useActionState } from 'react';
 import { useFormStatus } from 'react-dom';
+import type { ActionState } from '@/app/actions/auth';
 
 /**
  * Client-side form atoms. The only reason this file is client-rendered is
@@ -47,5 +49,26 @@ export function FormError({ error }: { error?: string }) {
     <p role="alert" className="mb-3 rounded-md bg-red-50 px-3 py-2 text-sm font-medium text-red-800">
       {error}
     </p>
+  );
+}
+
+/**
+ * A complete small form: posts to a server action, shows its error, and
+ * gives every submit button inside the pending state. For forms whose
+ * result needs displaying (not just errors), use useActionState directly.
+ */
+export function ActionForm({
+  action,
+  children,
+}: {
+  action: (prev: ActionState, formData: FormData) => Promise<ActionState>;
+  children: React.ReactNode;
+}) {
+  const [state, formAction] = useActionState(action, { ok: true });
+  return (
+    <form action={formAction}>
+      <FormError error={state.ok ? undefined : state.error} />
+      {children}
+    </form>
   );
 }

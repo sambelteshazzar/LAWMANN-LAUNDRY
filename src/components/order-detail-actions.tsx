@@ -1,45 +1,39 @@
 'use client';
 
-import { useActionState, useState } from 'react';
+import { useState } from 'react';
 import { moneyShort } from '@/lib/money';
 import { Field, TextInput } from '@/components/ui';
-import { DangerButton, FormError, PrimaryButton, SecondaryButton } from '@/components/form-buttons';
+import { ActionForm, DangerButton, PrimaryButton, SecondaryButton } from '@/components/form-buttons';
 import { advanceStatusAction, cancelOrderAction, confirmMomoAction, takePaymentAction } from '@/app/actions/orders';
 
 export function StatusMoveForm({ orderId, to, label, primary }: { orderId: string; to: string; label: string; primary?: boolean }) {
-  const [state, action] = useActionState(advanceStatusAction, { ok: true });
   const Button = primary ? PrimaryButton : SecondaryButton;
   return (
-    <form action={action}>
+    <ActionForm action={advanceStatusAction}>
       <input type="hidden" name="orderId" value={orderId} />
       <input type="hidden" name="to" value={to} />
-      <FormError error={state.ok ? undefined : state.error} />
       <Button>{label}</Button>
-    </form>
+    </ActionForm>
   );
 }
 
 export function ConfirmMomoForm({ paymentId }: { paymentId: string }) {
-  const [state, action] = useActionState(confirmMomoAction, { ok: true });
   return (
-    <form action={action}>
+    <ActionForm action={confirmMomoAction}>
       <input type="hidden" name="paymentId" value={paymentId} />
-      {state.ok ? null : <span className="mr-2 text-xs font-medium text-red-700">{state.error}</span>}
       <button type="submit" className="flex min-h-12 items-center rounded-md bg-green-700 px-3 text-sm font-semibold text-white">
         Confirm
       </button>
-    </form>
+    </ActionForm>
   );
 }
 
 export function CancelOrderForm({ orderId }: { orderId: string }) {
-  const [state, action] = useActionState(cancelOrderAction, { ok: true });
   return (
-    <form action={action}>
+    <ActionForm action={cancelOrderAction}>
       <input type="hidden" name="orderId" value={orderId} />
-      <FormError error={state.ok ? undefined : state.error} />
       <DangerButton>Cancel this order</DangerButton>
-    </form>
+    </ActionForm>
   );
 }
 
@@ -48,9 +42,7 @@ export function CancelOrderForm({ orderId }: { orderId: string }) {
  * Presets are computed from the balance still owing, not the gross — a
  * second visit offers what is left, not what the bag cost.
  */
-
 export function PaymentForm({ orderId, balancePesewa }: { orderId: string; balancePesewa: number }) {
-  const [state, action] = useActionState(takePaymentAction, { ok: true });
   const [method, setMethod] = useState<'cash' | 'momo'>('cash');
   const [amountGhs, setAmountGhs] = useState('');
 
@@ -60,7 +52,7 @@ export function PaymentForm({ orderId, balancePesewa }: { orderId: string; balan
   };
 
   return (
-    <form action={action}>
+    <ActionForm action={takePaymentAction}>
       <input type="hidden" name="orderId" value={orderId} />
       <input type="hidden" name="method" value={method} />
       <div className="mb-3 grid grid-cols-2 gap-2" role="group" aria-label="Payment method">
@@ -105,9 +97,8 @@ export function PaymentForm({ orderId, balancePesewa }: { orderId: string; balan
           <TextInput id={`gatewayRef-${orderId}`} name="gatewayRef" autoComplete="off" required placeholder="e.g. MP260928.1234.A1" />
         </Field>
       ) : null}
-      <FormError error={state.ok ? undefined : state.error} />
       <PrimaryButton>Take payment</PrimaryButton>
-    </form>
+    </ActionForm>
   );
 }
 

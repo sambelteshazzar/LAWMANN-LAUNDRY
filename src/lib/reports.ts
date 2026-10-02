@@ -115,6 +115,12 @@ export async function moneyToday(db: Db, shopId: string, now: Date): Promise<Mon
   };
 }
 
+/** Confirmed money inside an arbitrary range, for the reports page. */
+export async function revenueInRange(db: Db, shopId: string, range: Range): Promise<{ confirmedPesewa: number; confirmedCount: number }> {
+  const result = await paymentsIn(db, shopId, 'confirmed', range.from, range.to);
+  return { confirmedPesewa: result.total, confirmedCount: result.count };
+}
+
 export async function intakeCounts(db: Db, shopId: string, now: Date): Promise<IntakeCounts> {
   const countSince = async (from: Date): Promise<number> => {
     const rows = await db
