@@ -21,6 +21,7 @@ const DATA_DIR = join(process.cwd(), '.pglite');
 export type Db = ReturnType<typeof drizzleOverPglite<typeof schema>>;
 
 interface DbGlobal {
+  __lawmannClient?: PGlite;
   __lawmannDb?: Db;
   __lawmannBooted?: boolean;
   __lawmannBootPromise?: Promise<void>;
@@ -35,7 +36,10 @@ if (process.env.DATABASE_URL) {
   );
 }
 
-export const client = new PGlite(DATA_DIR);
+// Guarded like db below: constructing a second PGlite on the same files —
+// dev module reloads, tests sharing a process — aborts the WASM instance
+// and can tear the data directory. One process, one client, ever.
+export const client: PGlite = (g.__lawmannClient ??= new PGlite(DATA_DIR));
 
 export const db: Db = g.__lawmannDb ?? drizzleOverPglite(client, { schema });
 g.__lawmannDb = db;
