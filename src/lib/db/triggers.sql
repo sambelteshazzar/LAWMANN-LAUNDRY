@@ -2,7 +2,11 @@
 -- src/lib/db/schema.ts. Nothing here redefines a table; these are the three
 -- things Drizzle cannot express.
 --
--- Run after the generated migrations. See src/lib/db/client.ts.
+-- Run after the generated migrations. See src/lib/db/migrate.ts.
+--
+-- Everything here is idempotent (DROP IF EXISTS before CREATE/ADD): boot
+-- re-applies this file on every process start, and a second run must be a
+-- no-op rather than a crash.
 
 -- balance_due has exactly one definition and nothing writes it, so it cannot
 -- drift. A Postgres GENERATED column cannot be used here: generated expressions
@@ -66,6 +70,7 @@ BEGIN
 END;
 $$;
 
+DROP TRIGGER IF EXISTS payment_within_balance ON payment;
 CREATE TRIGGER payment_within_balance
   BEFORE INSERT OR UPDATE ON payment
   FOR EACH ROW EXECUTE FUNCTION payment_within_balance();
@@ -108,6 +113,7 @@ BEGIN
 END;
 $$;
 
+DROP TRIGGER IF EXISTS orders_forward_only_status ON orders;
 CREATE TRIGGER orders_forward_only_status
   BEFORE UPDATE OF status ON orders
   FOR EACH ROW EXECUTE FUNCTION forward_only_status();
@@ -116,8 +122,12 @@ CREATE TRIGGER orders_forward_only_status
 -- traceable, and a return whose components do not sum to the invoice is a
 -- return that does not reconcile. Checked on write rather than trusted.
 ALTER TABLE orders
+  DROP CONSTRAINT IF EXISTS orders_tax_foots;
+ALTER TABLE orders
   ADD CONSTRAINT orders_tax_foots
   CHECK (base_pesewa + vat_pesewa + nhil_pesewa + getfund_pesewa = gross_pesewa);
 
+ALTER TABLE orders
+  DROP CONSTRAINT IF EXISTS orders_weight_positive;
 ALTER TABLE orders
   ADD CONSTRAINT orders_weight_positive CHECK (weight_grams > 0);
