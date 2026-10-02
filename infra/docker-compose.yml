@@ -1,0 +1,57 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: lawmann-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: lawmann
+      POSTGRES_DB: lawmann
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      # Ghana runs on UTC. Store UTC, render in Africa/Accra (GMT, no DST).
+      TZ: UTC
+      PGTZ: UTC
+    ports:
+      - '127.0.0.1:5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    command:
+      - postgres
+      # Money is bigint and needs no special handling, but the collation does:
+      # a deterministic C collation keeps ORDER BY stable for order numbers.
+      - -c
+      - log_timezone=UTC
+      - -c
+      - timezone=UTC
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U lawmann -d lawmann']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Nightly logical dump. A backup you have not restored is not a backup, so
+  # the retention is long and infra/restore-check.md documents the drill.
+  dump:
+    image: postgres:17-alpine
+    container_name: lawmann-dump
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      TZ: UTC
+    volumes:
+      - ./backups:/backups
+    entrypoint:
+      - sh
+      - -c
+      - |
+        while true; do
+          ts=$$(date -u +%Y%m%dT%H%M%SZ)
+          pg_dump -h postgres -U lawmann -d lawmann -Fc -f "/backups/lawmann-$$ts.dump"
+          find /backups -name 'lawmann-*.dump' -mtime +30 -delete
+          sleep 86400
+        done
+
+volumes:
+  pgdata:
