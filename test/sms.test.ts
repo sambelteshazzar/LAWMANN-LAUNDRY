@@ -1,5 +1,5 @@
 import fc from 'fast-check';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { eq } from 'drizzle-orm';
 import type { PGlite } from '@electric-sql/pglite';
 import * as schema from '@/lib/db/schema';
@@ -11,7 +11,7 @@ import {
   readyMessage,
 } from '@/lib/sms/templates';
 import { enqueueSms, sendQueued, attemptSend } from '@/lib/sms/outbox';
-import { freshDb, seededShop, type ShopFixture, type TestDb } from './db';
+import { freshDb, resetDb, seededShop, type ShopFixture, type TestDb } from './db';
 
 describe('templates', () => {
   it('the accepted message carries weight, price, balance and order number', () => {
@@ -60,16 +60,23 @@ describe('outbox', () => {
   const enqueue = () =>
     enqueueSms(db, { shopId: fx.shopId, orderId: null, kind: 'accepted', toPhone: '0241234567', body: 'Lawmann: test.' });
 
-  beforeEach(async () => {
+  beforeAll(async () => {
     db = await freshDb();
     client = db.$client;
+  });
+
+  beforeEach(async () => {
+    await resetDb(db);
     fx = await seededShop(db, client);
   });
 
-  afterEach(async () => {
-    await client.close();
+  afterEach(() => {
     vi.unstubAllGlobals();
     vi.unstubAllEnvs();
+  });
+
+  afterAll(async () => {
+    await client.close();
   });
 
   it('records intent as queued before any send', async () => {

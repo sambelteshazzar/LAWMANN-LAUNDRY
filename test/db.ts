@@ -28,6 +28,17 @@ export async function freshDb(): Promise<TestDb> {
   return drizzleOverPglite(client, { schema });
 }
 
+/**
+ * Wipes every business table between tests. Booting a PGlite per test costs
+ * seconds; truncating costs milliseconds. lawmann_migrations is untouched —
+ * the schema stays applied, only the data goes.
+ */
+export async function resetDb(db: TestDb): Promise<void> {
+  await db.$client.exec(
+    'TRUNCATE shift, operating_cost, sms_message, order_event, payment, orders, student, staff, location, shop, band RESTART IDENTITY CASCADE',
+  );
+}
+
 /** One shop, one campus location, one staff member, one student — the minimum a legal order needs. */
 export async function seededShop(db: TestDb, client: PGlite): Promise<ShopFixture> {
   const shops = await db
