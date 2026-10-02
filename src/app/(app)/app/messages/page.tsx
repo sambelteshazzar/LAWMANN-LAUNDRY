@@ -41,10 +41,13 @@ export default async function MessagesPage() {
           </p>
         </div>
       ) : null}
-      {waiting > 0 && configured && session.role === 'counter' ? (
+      {waiting > 0 && configured ? (
         <div className="mb-4">
           <ActionForm action={sendAllAction}>
-            <SecondaryButton>Send {waiting} waiting {waiting === 1 ? 'message' : 'messages'}</SecondaryButton>
+            <SecondaryButton>
+              Send {waiting} waiting {waiting === 1 ? 'message' : 'messages'}
+              {session.role === 'owner' ? ' (counter away)' : ''}
+            </SecondaryButton>
           </ActionForm>
         </div>
       ) : null}
