@@ -43,6 +43,14 @@ export function Money({ pesewas, short }: { pesewas: number; short?: boolean }) 
   return <span className="tabular-nums">{short ? moneyShort(pesewas) : money(pesewas)}</span>;
 }
 
+/** "today", "1 day", "5 days" — for queues where age is the point. */
+export function ageLabel(from: Date): string {
+  const days = Math.floor((Date.now() - from.getTime()) / (24 * 60 * 60 * 1000));
+  if (days <= 0) return 'today';
+  if (days === 1) return '1 day';
+  return `${days} days`;
+}
+
 type BadgeTone = 'stone' | 'blue' | 'green' | 'amber' | 'red';
 
 const BADGE_TONES: Record<BadgeTone, string> = {

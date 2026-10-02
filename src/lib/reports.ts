@@ -131,6 +131,18 @@ export async function intakeCounts(db: Db, shopId: string, now: Date): Promise<I
   return { day, week, month };
 }
 
+/** Open orders grouped by status, for the dashboard's "bags in the shop" row. */
+export async function statusCounts(db: Db, shopId: string): Promise<Record<string, number>> {
+  const rows = await db
+    .select({ status: schema.orders.status, count: sql<string | number>`count(*)` })
+    .from(schema.orders)
+    .where(eq(schema.orders.shopId, shopId))
+    .groupBy(schema.orders.status);
+  const out: Record<string, number> = {};
+  for (const row of rows) out[row.status] = Number(row.count);
+  return out;
+}
+
 interface ArrearsQueryRow {
   id: string;
   order_no: string;

@@ -3,7 +3,7 @@ import { getDb, ensureBooted } from '@/lib/db';
 import { getSession } from '@/lib/session';
 import { listOrders, type OrderListFilter } from '@/lib/orders';
 import { weightLabel } from '@/lib/money';
-import { EmptyState, Money, Page, PageTitle, Section, StatusBadge } from '@/components/ui';
+import { EmptyState, Money, Page, PageTitle, Section, StatusBadge, ageLabel } from '@/components/ui';
 import { PlusIcon } from '@/components/icons';
 
 export const metadata = { title: 'Orders · Lawmann Laundry' };
@@ -15,13 +15,6 @@ const TABS: Array<{ key: OrderListFilter; label: string }> = [
   { key: 'collected', label: 'Collected' },
   { key: 'cancelled', label: 'Cancelled' },
 ];
-
-function ageLabel(from: Date): string {
-  const days = Math.floor((Date.now() - from.getTime()) / (24 * 60 * 60 * 1000));
-  if (days <= 0) return 'today';
-  if (days === 1) return '1 day';
-  return `${days} days`;
-}
 
 export default async function OrdersPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
   const session = await getSession();

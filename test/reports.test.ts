@@ -13,6 +13,7 @@ import {
   costPerKilo,
   intakeCounts,
   moneyToday,
+  statusCounts,
   taxSummary,
 } from '@/lib/reports';
 import { activityFeed } from '@/lib/activity';
@@ -109,6 +110,12 @@ describe('intakeCounts', () => {
     expect(counts.day).toBe(1);
     expect(counts.week).toBe(1);
     expect(counts.month).toBe(3);
+  });
+});
+
+describe('statusCounts', () => {
+  it('groups every order by status', async () => {
+    expect(await statusCounts(db, fx.shopId)).toEqual({ received: 3, collected: 1 });
   });
 });
 
