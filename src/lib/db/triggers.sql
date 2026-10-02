@@ -94,8 +94,10 @@ BEGIN
     RETURN NEW;
   END IF;
 
-  from_pos := enum_position(NULL::order_status, OLD.status);
-  to_pos   := enum_position(NULL::order_status, NEW.status);
+  -- enum_position is not available in this Postgres build; enum_range is
+  -- universal and reads the order from the type definition itself.
+  from_pos := array_position(enum_range(NULL::order_status), OLD.status);
+  to_pos   := array_position(enum_range(NULL::order_status), NEW.status);
 
   IF to_pos < from_pos THEN
     RAISE EXCEPTION 'order % cannot move backwards from % to %', OLD.order_no, OLD.status, NEW.status
