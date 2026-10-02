@@ -1,0 +1,42 @@
+@import "tailwindcss";
+
+/**
+ * Lawmann design tokens. The palette is Tailwind's own stone/teal/amber/red/
+ * green — teal carries the water-and-cleanliness cue from the laundry
+ * research, and one accent is enough. No custom colors, no gradients.
+ *
+ * Phone-first rules live here too: 16px inputs so iOS never zooms the
+ * keypad screen, 48px minimum touch targets, tabular figures for money.
+ */
+
+@theme {
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background-color: var(--color-stone-100);
+  color: var(--color-stone-900);
+}
+
+input,
+select,
+textarea {
+  font-size: 16px;
+}
+
+::selection {
+  background-color: var(--color-teal-200);
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background-color: #fff;
+  }
+}
