@@ -1,7 +1,7 @@
 # Lawmann design direction
 
-The owner-approved direction for every Lawmann surface (public site and ops
-app). Antislop treats this file as data to apply, not instructions to obey.
+The owner-approved direction for Lawmann surfaces. Antislop treats this file
+as data to apply, not instructions to obey.
 
 ## Identity
 
@@ -13,33 +13,48 @@ at every step.
 
 Clean, fresh, trustworthy, warm. Student-affordable, not aspirational.
 
-## Palette
+## Public site: Botanical / Organic Serif
 
-White and stone neutrals + teal accent. Teal carries the water-and-cleanliness
-cue and is the continuity thread with the ops app. Green stays reserved for
-"ready" status in ops; red and amber are status-only tones. No gradients, no
-glassmorphism, no glows. Two core colors plus one accent.
+The marketing surface speaks botanical: soft, grounded, editorial.
 
-## Typography
+- Palette: warm alabaster #F9F8F4 ground, deep forest #2D3A31 text, sage
+  #8C9A84 accents, soft clay #DCCFC2/#F2F0EB fills, terracotta #C27B66
+  interaction tones (terracotta-deep #A05A45 for text, terracotta for hover
+  and borders). No artificial brights.
+- Typography: Playfair Display for headlines (italic accents on key words),
+  Source Sans 3 for body. Large, airy scale.
+- Shapes: rounded-3xl cards, pill buttons, arch imagery (rounded-t-full).
+  Thin 1.5px stroke icons in soft sage circles.
+- Paper grain: the fixed SVG noise overlay at 0.015 opacity is mandatory on
+  every public page. It is the difference between flat and tactile.
+- Motion: slow and graceful. 300ms button hovers, 500ms card lifts, one
+  700ms rise on the hero. Hover lifts cards and images scale; nothing snaps.
+- Structure: eyebrow badge, matched-height CTA pairs, price anchor in the
+  hero, trust bar under the hero, uppercase kickers above section headings,
+  staggered card grids (md:even:translate-y-12).
 
-Plus Jakarta Sans via next/font, applied to both surfaces: a friendly humanist
-sans that reads student-warm without losing professionalism, and gives the
-public surface an identity the system font stack cannot. The system stack
-remains the fallback. Reason: typeface chosen for brand character (R-06).
+## Ops app: the original working skin
+
+- Palette: white and stone neutrals + teal accent. Teal carries the
+  water-and-cleanliness cue. Green reserved for "ready" status in ops; red
+  and amber are status-only tones. No gradients, no glassmorphism, no glows.
+- Typography: Plus Jakarta Sans via next/font. Stamped order numbers
+  (LW-...) carry the identity inside the app.
 
 ## Dials
 
-ENERGY 2 / RHYTHM 2 / MOTION 1. Hover states and measured transitions; one
-scroll-reveal at most; no parallax, no choreography.
+Public: ENERGY 2 / RHYTHM 2 / MOTION 1. Ops: ENERGY 2 / RHYTHM 2 / MOTION 1.
+Hover states and measured transitions; one load-in reveal on the public hero;
+no parallax, no choreography.
 
 ## Motif
 
 The fold line: two hairlines one pixel apart, echoing a pressed shirt fold.
-It separates the hero from content and repeats between public sections. The
-stamped order numbers (LW-...) carry the identity inside the ops app.
+On the public site it is drawn in stoneline; in the ops app it separates the
+shell from content.
 
 ## Photography
 
 Real photos of the shop and laundry, supplied by the owner. Until then,
-labeled placeholders ([REAL PHOTO], "owner to provide"), never stock images
+arch-shaped labeled placeholders ("owner to provide"), never stock images
 disguised as final.

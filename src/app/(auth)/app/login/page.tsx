@@ -1,9 +1,19 @@
+import type { Viewport } from 'next';
 import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/session';
 import { loginChoices } from '@/app/actions/auth';
+import { PaperGrain } from '@/components/public';
+import { Wordmark } from '@/components/logo';
 import { LoginForm } from './login-form';
 
 export const metadata = { title: 'Sign in · Lawmann Laundry' };
+
+export const viewport: Viewport = { themeColor: '#f9f8f4' };
+
+/**
+ * The gate between the botanical public surface and the teal ops app.
+ * Staff arrive by bookmark or the /app redirect, never by a public link.
+ */
 
 export default async function LoginPage() {
   const session = await getSession();
@@ -11,19 +21,25 @@ export default async function LoginPage() {
 
   const staff = await loginChoices();
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-sm flex-col justify-center px-4 py-10">
-      <div className="mb-6 text-center">
-        <p className="text-sm font-semibold uppercase tracking-widest text-teal-800">Lawmann Laundry</p>
-        <h1 className="mt-1 text-2xl font-bold text-stone-900">Who is working?</h1>
-      </div>
-      <div className="rounded-lg border border-stone-200 bg-white p-5">
-        {staff.length === 0 ? (
-          <p className="text-sm text-stone-600">
-            Nobody can log in yet. The owner sets staff PINs up first — run the seed script to load the demo team.
-          </p>
-        ) : (
-          <LoginForm staff={staff} />
-        )}
+    <main className="botanical flex min-h-dvh flex-col items-center justify-center bg-alabaster px-4 py-10 font-body text-forest">
+      <PaperGrain />
+      <div className="w-full max-w-sm">
+        <div className="mb-8 flex flex-col items-center text-center">
+          <Wordmark size="lg" tone="forest" />
+          <h1 className="mt-5 font-display text-4xl font-bold tracking-tight">
+            Who is <span className="italic text-terracotta-deep">working</span>?
+          </h1>
+        </div>
+        <div className="rounded-3xl bg-white p-6 shadow-soft-lg sm:p-8">
+          {staff.length === 0 ? (
+            <p className="text-sm leading-relaxed text-forest/70">
+              Nobody can log in yet. The owner sets staff PINs up first, so run the seed script to
+              load the demo team.
+            </p>
+          ) : (
+            <LoginForm staff={staff} />
+          )}
+        </div>
       </div>
     </main>
   );

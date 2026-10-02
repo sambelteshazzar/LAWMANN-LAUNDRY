@@ -11,6 +11,25 @@
 
 @theme {
   --font-sans: var(--font-brand), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: var(--font-display), Georgia, "Times New Roman", serif;
+  --font-body: var(--font-body), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  --color-alabaster: #f9f8f4;
+  --color-forest: #2d3a31;
+  --color-forest-deep: #24302a;
+  --color-sage: #8c9a84;
+  --color-sage-deep: #5f6e57;
+  --color-sage-soft: #e9ede6;
+  --color-clay: #dccfc2;
+  --color-clay-soft: #f2f0eb;
+  --color-stoneline: #e6e2da;
+  --color-terracotta: #c27b66;
+  --color-terracotta-deep: #a05a45;
+
+  --shadow-soft: 0 4px 6px -1px rgb(45 58 49 / 0.05);
+  --shadow-soft-md: 0 10px 15px -3px rgb(45 58 49 / 0.05), 0 4px 6px -4px rgb(45 58 49 / 0.05);
+  --shadow-soft-lg: 0 20px 40px -10px rgb(45 58 49 / 0.08);
+  --shadow-bloom: 0 25px 50px -12px rgb(45 58 49 / 0.15);
 }
 
 html {
@@ -30,6 +49,36 @@ textarea {
 
 ::selection {
   background-color: var(--color-teal-200);
+}
+
+.botanical ::selection {
+  background-color: var(--color-clay);
+}
+
+@keyframes botanical-rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .botanical .rise {
+    animation: botanical-rise 700ms ease-out both;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .botanical *,
+  .botanical *::before,
+  .botanical *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
 }
 
 @media print {
