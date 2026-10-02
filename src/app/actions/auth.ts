@@ -3,9 +3,10 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
-import { eq, isNotNull } from 'drizzle-orm';
+import { and, eq, isNotNull } from 'drizzle-orm';
 import { getDb, ensureBooted } from '@/lib/db';
 import { staff } from '@/lib/db/schema';
+import { loginEligibleStaff, rowCanLogIn } from '@/lib/staff';
 import {
   SESSION_COOKIE,
   SESSION_MAX_AGE_SECONDS,
@@ -37,7 +38,7 @@ export async function loginAction(_prev: ActionState, formData: FormData): Promi
   await ensureBooted();
   const rows = await getDb().select().from(staff).where(eq(staff.id, parsed.data.staffId));
   const person = rows[0];
-  if (!person?.pinHash || !verifyPin(parsed.data.pin, person.pinHash)) {
+  if (!rowCanLogIn(person) || !verifyPin(parsed.data.pin, person.pinHash)) {
     noteFailure(parsed.data.staffId);
     return { ok: false, error: GENERIC_FAILURE };
   }
@@ -103,8 +104,40 @@ export async function resetPinAction(_prev: ActionState, formData: FormData): Pr
 
 export async function loginChoices(): Promise<Array<{ id: string; name: string; role: string }>> {
   await ensureBooted();
-  return getDb()
-    .select({ id: staff.id, name: staff.name, role: staff.role })
-    .from(staff)
-    .where(isNotNull(staff.pinHash));
+  return loginEligibleStaff(getDb());
+}
+
+export async function setStaffActiveAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const session = await requireSession();
+  if (!canManageStaff(session.role)) return { ok: false, error: 'Only the owner manages staff.' };
+
+  const staffId = String(formData.get('staffId') ?? '');
+  const active = formData.get('active') === 'true';
+
+  await ensureBooted();
+  const db = getDb();
+  if (staffId === session.staffId && !active) {
+    return { ok: false, error: 'Move someone else first: you cannot move yourself to former staff.' };
+  }
+  if (!active) {
+    const owners = await db
+      .select({ id: staff.id })
+      .from(staff)
+      .where(
+        and(
+          eq(staff.shopId, session.shopId),
+          eq(staff.role, 'owner'),
+          eq(staff.active, true),
+        ),
+      );
+    if (owners.length <= 1 && owners[0]?.id === staffId) {
+      return { ok: false, error: 'The shop needs at least one working owner.' };
+    }
+  }
+  await db
+    .update(staff)
+    .set({ active })
+    .where(and(eq(staff.id, staffId), eq(staff.shopId, session.shopId)));
+  revalidatePath('/app/staff');
+  return { ok: true };
 }

@@ -89,6 +89,8 @@ export const staff = pgTable(
     role: staffRole('role').notNull(),
     /** scrypt:<salt>:<hash>. Null until the owner sets a PIN; null cannot log in. */
     pinHash: text('pin_hash'),
+    /** False means former staff: history stays, the door closes. */
+    active: boolean('active').notNull().default(true),
   },
   (t) => [unique('staff_shop_name').on(t.shopId, t.name)],
 );
@@ -271,7 +273,7 @@ export const orderEvent = pgTable(
 export const EXPECTED_COLUMNS = {
   orders: ['weight_grams', 'gross_pesewa', 'base_pesewa', 'vat_pesewa', 'nhil_pesewa', 'getfund_pesewa', 'recorded_by'],
   payment: ['amount_pesewa', 'gateway_ref', 'state', 'recorded_by'],
-  staff: ['pin_hash'],
+  staff: ['pin_hash', 'active'],
   sms_message: ['kind', 'state', 'to_phone', 'body', 'sent_at'],
   order_event: ['from_status', 'to_status', 'staff_id', 'at'],
 } as const satisfies Record<string, readonly string[]>;

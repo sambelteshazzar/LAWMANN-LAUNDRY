@@ -1,0 +1,1 @@
+ALTER TABLE "staff" ADD COLUMN "active" boolean DEFAULT true NOT NULL;

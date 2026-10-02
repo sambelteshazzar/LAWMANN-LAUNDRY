@@ -15,6 +15,13 @@
       "when": 1790594791610,
       "tag": "0001_auth_accountability_outbox",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790961518724,
+      "tag": "0002_chilly_prima",
+      "breakpoints": true
     }
   ]
 }

@@ -5,14 +5,15 @@ import { staff } from '@/lib/db/schema';
 import { getSession } from '@/lib/session';
 import { Badge, Field, Page, PageTitle, Section, SelectInput, TextInput } from '@/components/ui';
 import { ActionForm, PrimaryButton, SecondaryButton } from '@/components/form-buttons';
-import { createStaffAction, resetPinAction } from '@/app/actions/auth';
+import { createStaffAction, resetPinAction, setStaffActiveAction } from '@/app/actions/auth';
 
 export const metadata = { title: 'Staff · Lawmann Laundry' };
 
 /**
  * Owner only: who can open the app, in which role, under which PIN. A PIN
  * change takes effect on the next request — a fired collector loses access
- * immediately, not at cookie expiry.
+ * immediately, not at cookie expiry. Moving someone to former staff closes
+ * the login door but keeps every bag they ever touched.
  */
 export default async function StaffPage() {
   const session = await getSession();
@@ -21,17 +22,22 @@ export default async function StaffPage() {
 
   await ensureBooted();
   const rows = await getDb().select().from(staff).orderBy(asc(staff.name));
+  const working = rows.filter((s) => s.active);
+  const former = rows.filter((s) => !s.active);
 
   return (
     <Page>
       <PageTitle title="Staff" hint="Names, roles, PINs. Only you see this page." />
-      <Section title="Everyone with access">
+      <Section title="Working now">
         <ul className="divide-y divide-stone-100">
-          {rows.map((s) => (
+          {working.map((s) => (
             <li key={s.id} className="py-3">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-sm font-semibold text-stone-900">{s.name}</p>
+                  <p className="text-sm font-semibold text-stone-900">
+                    {s.name}
+                    {s.id === session.staffId ? <span className="ml-2 font-normal text-stone-500">(you)</span> : null}
+                  </p>
                   <p className="mt-0.5">
                     <Badge tone={s.role === 'owner' ? 'green' : 'stone'}>{s.role}</Badge>
                   </p>
@@ -49,10 +55,42 @@ export default async function StaffPage() {
                   </div>
                 </div>
               </ActionForm>
+              {s.id === session.staffId ? null : (
+                <ActionForm action={setStaffActiveAction}>
+                  <input type="hidden" name="staffId" value={s.id} />
+                  <input type="hidden" name="active" value="false" />
+                  <div className="mt-2">
+                    <SecondaryButton>Move to former staff</SecondaryButton>
+                  </div>
+                </ActionForm>
+              )}
             </li>
           ))}
         </ul>
       </Section>
+      {former.length > 0 ? (
+        <Section title="Former staff">
+          <ul className="divide-y divide-stone-100">
+            {former.map((s) => (
+              <li key={s.id} className="flex items-center justify-between gap-3 py-3">
+                <div>
+                  <p className="text-sm font-semibold text-stone-500">{s.name}</p>
+                  <p className="mt-0.5">
+                    <Badge tone="stone">{s.role}</Badge>
+                  </p>
+                </div>
+                <ActionForm action={setStaffActiveAction}>
+                  <input type="hidden" name="staffId" value={s.id} />
+                  <input type="hidden" name="active" value="true" />
+                  <div className="w-32 shrink-0">
+                    <SecondaryButton>Bring back</SecondaryButton>
+                  </div>
+                </ActionForm>
+              </li>
+            ))}
+          </ul>
+        </Section>
+      ) : null}
       <Section title="Add someone">
         <ActionForm action={createStaffAction}>
           <Field label="Name" htmlFor="name">

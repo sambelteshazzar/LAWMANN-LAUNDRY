@@ -2,12 +2,13 @@ import { cookies } from 'next/headers';
 import { eq } from 'drizzle-orm';
 import { getDb, ensureBooted } from '@/lib/db';
 import { staff } from '@/lib/db/schema';
+import { rowCanLogIn } from '@/lib/staff';
 import { parseSession, sessionSecret, SESSION_COOKIE, type Session } from '@/lib/auth';
 
 /**
  * The only file that may read the session cookie. A session dies when the
- * staff row or its PIN does, so a fired collector or a revoked PIN loses
- * access on the next request, not at cookie expiry.
+ * staff row, its PIN, or its active flag does, so a former staff member
+ * loses access on the next request, not at cookie expiry.
  */
 
 export async function getSession(): Promise<Session | null> {
@@ -18,8 +19,8 @@ export async function getSession(): Promise<Session | null> {
   await ensureBooted();
   const rows = await getDb().select().from(staff).where(eq(staff.id, parsed.staffId));
   const person = rows[0];
-  if (!person || !person.pinHash) return null;
-  return { staffId: person.id, name: person.name, role: person.role, shopId: person.shopId };
+  if (!rowCanLogIn(person)) return null;
+  return { staffId: person!.id, name: person!.name, role: person!.role, shopId: person!.shopId };
 }
 
 export async function requireSession(): Promise<Session> {
