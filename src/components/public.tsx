@@ -102,15 +102,3 @@ export function PillLink({ href, children }: { href: string; children: ReactNode
     </Link>
   );
 }
-
-export function ArchPhoto({ hint }: { hint: string }) {
-  return (
-    <figure
-      className="relative flex aspect-[3/4] w-full flex-col items-center justify-center gap-3 overflow-hidden rounded-t-full border border-stoneline bg-clay-soft md:aspect-square md:h-[440px]"
-      aria-label="Photo placeholder"
-    >
-      <span className="pointer-events-none absolute inset-3 rounded-t-full border border-dashed border-sage" />
-      <p className="max-w-48 text-center text-sm font-medium text-forest/60">{hint}</p>
-    </figure>
-  );
-}

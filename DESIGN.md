@@ -55,6 +55,10 @@ shell from content.
 
 ## Photography
 
-Real photos of the shop and laundry, supplied by the owner. Until then,
-arch-shaped labeled placeholders ("owner to provide"), never stock images
-disguised as final.
+The hero carries an illustrative stock photo (CC0 from StockSnap via
+Openverse, public/images/hero-laundry.jpg) — legally free, no attribution
+required. It stands in for the shop, never claims to be it: alt text stays
+generic ("washing machines inside a working laundromat"). When the owner
+supplies real photos of the Lawmann shop, swap the file at that path and
+update the alt text; nothing else changes. No stock image may be captioned
+or alt-texted as the actual shop.

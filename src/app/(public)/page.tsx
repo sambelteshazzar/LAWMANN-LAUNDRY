@@ -1,8 +1,8 @@
 import { BANDS } from '@/lib/pricing';
 import { moneyShort } from '@/lib/money';
 import { AREAS } from '@/lib/site';
+import Image from 'next/image';
 import {
-  ArchPhoto,
   Badge,
   CallButton,
   Kicker,
@@ -95,7 +95,16 @@ export default function LandingPage() {
           </div>
         </div>
         <div className="relative mx-auto w-full max-w-md md:max-w-none">
-          <ArchPhoto hint="Real photo of the shop — owner to provide" />
+          <figure className="relative aspect-[3/4] w-full overflow-hidden rounded-t-full border border-stoneline md:aspect-square md:h-[440px]">
+            <Image
+              src="/images/hero-laundry.jpg"
+              alt="Washing machines inside a working laundromat"
+              fill
+              priority
+              sizes="(min-width: 768px) 42vw, 90vw"
+              className="object-cover transition-transform duration-700 hover:scale-105"
+            />
+          </figure>
           <div className="relative z-10 mx-auto -mt-14 w-[92%] rounded-3xl bg-white p-6 shadow-bloom md:ml-auto md:-mt-24 md:w-[88%] md:p-8">
             <h2 className="font-display text-xl font-semibold italic text-forest">
               As easy as 1-2-3
