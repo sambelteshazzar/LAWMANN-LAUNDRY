@@ -57,7 +57,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
 
   return (
     <Page>
-      <Link href="/orders" className="no-print mb-3 inline-flex min-h-12 items-center gap-1 text-sm font-semibold text-stone-600">
+      <Link href="/app/orders" className="no-print mb-3 inline-flex min-h-12 items-center gap-1 text-sm font-semibold text-stone-600">
         <BackIcon className="h-5 w-5" />
         Orders
       </Link>
@@ -195,7 +195,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
 
       <div className="no-print mt-4 flex flex-col gap-2">
         <Link
-          href={`/orders/${order.id}/receipt`}
+          href={`/app/orders/${order.id}/receipt`}
           className="inline-flex min-h-12 items-center justify-center rounded-md border border-stone-300 bg-white px-5 font-semibold text-stone-800"
         >
           Receipt

@@ -49,7 +49,7 @@ function rangeFor(key: RangeKey, now: Date): { range: Range; label: string } {
 export default async function ReportsPage({ searchParams }: { searchParams: Promise<{ range?: string }> }) {
   const session = await getSession();
   if (!session) return null;
-  if (session.role === 'collector') redirect('/orders/new');
+  if (session.role === 'collector') redirect('/app/orders/new');
 
   const params = await searchParams;
   const key: RangeKey = RANGES.some((r) => r.key === params.range) ? (params.range as RangeKey) : 'month';

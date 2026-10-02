@@ -26,17 +26,17 @@ export interface NavEntry {
 }
 
 export const NAV_ITEMS: NavEntry[] = [
-  { href: '/', label: 'Home', icon: HomeIcon, roles: ['owner', 'counter'], primary: true },
-  { href: '/orders/new', label: 'New', icon: PlusIcon, roles: ['owner', 'counter', 'collector'], primary: true },
-  { href: '/orders', label: 'Orders', icon: OrdersIcon, roles: ['owner', 'counter', 'collector'], primary: true },
-  { href: '/arrears', label: 'Owing', icon: ArrearsIcon, roles: ['owner', 'counter', 'collector'], primary: true },
-  { href: '/menu', label: 'Menu', icon: MenuIcon, roles: ['owner', 'counter', 'collector'], primary: true },
-  { href: '/activity', label: 'Activity', icon: ActivityIcon, roles: ['owner', 'counter'], primary: false },
-  { href: '/costs', label: 'Costs', icon: CostsIcon, roles: ['owner', 'counter'], primary: false },
-  { href: '/reports', label: 'Reports', icon: ReportsIcon, roles: ['owner', 'counter'], primary: false },
-  { href: '/messages', label: 'Messages', icon: MessagesIcon, roles: ['owner', 'counter'], primary: false },
-  { href: '/shifts', label: 'Shifts', icon: ShiftsIcon, roles: ['owner', 'counter'], primary: false },
-  { href: '/staff', label: 'Staff', icon: StaffIcon, roles: ['owner'], primary: false },
+  { href: '/app', label: 'Home', icon: HomeIcon, roles: ['owner', 'counter'], primary: true },
+  { href: '/app/orders/new', label: 'New', icon: PlusIcon, roles: ['owner', 'counter', 'collector'], primary: true },
+  { href: '/app/orders', label: 'Orders', icon: OrdersIcon, roles: ['owner', 'counter', 'collector'], primary: true },
+  { href: '/app/arrears', label: 'Owing', icon: ArrearsIcon, roles: ['owner', 'counter', 'collector'], primary: true },
+  { href: '/app/menu', label: 'Menu', icon: MenuIcon, roles: ['owner', 'counter', 'collector'], primary: true },
+  { href: '/app/activity', label: 'Activity', icon: ActivityIcon, roles: ['owner', 'counter'], primary: false },
+  { href: '/app/costs', label: 'Costs', icon: CostsIcon, roles: ['owner', 'counter'], primary: false },
+  { href: '/app/reports', label: 'Reports', icon: ReportsIcon, roles: ['owner', 'counter'], primary: false },
+  { href: '/app/messages', label: 'Messages', icon: MessagesIcon, roles: ['owner', 'counter'], primary: false },
+  { href: '/app/shifts', label: 'Shifts', icon: ShiftsIcon, roles: ['owner', 'counter'], primary: false },
+  { href: '/app/staff', label: 'Staff', icon: StaffIcon, roles: ['owner'], primary: false },
 ];
 
 export function primaryTabs(role: Role): NavEntry[] {
@@ -48,7 +48,7 @@ export function secondaryItems(role: Role): NavEntry[] {
 }
 
 function isActive(pathname: string, href: string): boolean {
-  if (href === '/') return pathname === '/';
+  if (href === '/app') return pathname === '/app';
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
@@ -83,7 +83,7 @@ export function BottomNav({ role }: { role: Role }) {
 
 export function SideNav({ role, staffName }: { role: Role; staffName: string }) {
   const pathname = usePathname();
-  const allowed = NAV_ITEMS.filter((item) => item.roles.includes(role) && item.href !== '/menu');
+  const allowed = NAV_ITEMS.filter((item) => item.roles.includes(role) && item.href !== '/app/menu');
   return (
     <nav aria-label="Primary" className="no-print hidden w-56 shrink-0 flex-col gap-1 md:flex">
       <div className="mb-2 px-2">

@@ -10,12 +10,12 @@ import { costSchema, shiftCloseSchema, shiftOpenSchema } from '@/lib/validation'
 import type { ActionState } from './auth';
 
 function refreshOps(): void {
-  revalidatePath('/costs');
-  revalidatePath('/reports');
-  revalidatePath('/shifts');
-  revalidatePath('/messages');
-  revalidatePath('/activity');
-  revalidatePath('/');
+  revalidatePath('/app/costs');
+  revalidatePath('/app/reports');
+  revalidatePath('/app/shifts');
+  revalidatePath('/app/messages');
+  revalidatePath('/app/activity');
+  revalidatePath('/app');
 }
 
 export async function addCostAction(_prev: ActionState, formData: FormData): Promise<ActionState> {

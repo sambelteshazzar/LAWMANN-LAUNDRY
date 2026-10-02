@@ -44,7 +44,7 @@ function formatTime(d: Date): string {
 export default async function ActivityPage({ searchParams }: { searchParams: Promise<{ day?: string; kind?: string; staffId?: string }> }) {
   const session = await getSession();
   if (!session) return null;
-  if (session.role === 'collector') redirect('/orders/new');
+  if (session.role === 'collector') redirect('/app/orders/new');
 
   const params = await searchParams;
   const dayParam = /^\d{4}-\d{2}-\d{2}$/.test(params.day ?? '') ? params.day! : todayISO();
@@ -113,7 +113,7 @@ export default async function ActivityPage({ searchParams }: { searchParams: Pro
                       {item.kind}
                     </span>
                     {item.orderId ? (
-                      <Link href={`/orders/${item.orderId}`} className="inline-flex min-h-12 items-center text-xs font-semibold text-teal-800 underline">
+                      <Link href={`/app/orders/${item.orderId}`} className="inline-flex min-h-12 items-center text-xs font-semibold text-teal-800 underline">
                         Open order
                       </Link>
                     ) : null}

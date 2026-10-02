@@ -12,7 +12,7 @@ import { logoutAction } from '@/app/actions/auth';
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession();
-  if (!session) redirect('/login');
+  if (!session) redirect('/app/login');
 
   return (
     <div className="min-h-dvh">

@@ -21,7 +21,7 @@ function formatTime(d: Date): string {
 export default async function DashboardPage() {
   const session = await getSession();
   if (!session) return null;
-  if (session.role === 'collector') redirect('/orders/new');
+  if (session.role === 'collector') redirect('/app/orders/new');
 
   await ensureBooted();
   const db = getDb();
@@ -74,7 +74,7 @@ export default async function DashboardPage() {
             {counts.week} this week · {counts.month} this month
           </div>
         </div>
-        <Link href="/arrears" className={`rounded-lg border p-4 ${owingTotal > 0 ? 'border-red-200 bg-red-50' : 'border-stone-200 bg-white'}`}>
+        <Link href="/app/arrears" className={`rounded-lg border p-4 ${owingTotal > 0 ? 'border-red-200 bg-red-50' : 'border-stone-200 bg-white'}`}>
           <div className="text-sm text-stone-500">Still owing</div>
           <div className="mt-1 text-2xl font-bold tabular-nums text-stone-900">
             <Money pesewas={owingTotal} />
@@ -90,7 +90,7 @@ export default async function DashboardPage() {
           {(['received', 'washing', 'ready'] as const).map((s) => (
             <Link
               key={s}
-              href={s === 'received' ? '/orders' : `/orders?status=${s}`}
+              href={s === 'received' ? '/app/orders' : `/app/orders?status=${s}`}
               className="flex min-h-12 items-center gap-2 rounded-md border border-stone-200 px-3 text-sm font-semibold text-stone-700"
             >
               <StatusBadge status={s} />
@@ -107,7 +107,7 @@ export default async function DashboardPage() {
           <ul className="divide-y divide-stone-100">
             {topArrears.map((a) => (
               <li key={a.orderId}>
-                <Link href={`/orders/${a.orderId}`} className="flex min-h-16 items-center gap-3 py-2">
+                <Link href={`/app/orders/${a.orderId}`} className="flex min-h-16 items-center gap-3 py-2">
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold text-stone-900">
                       {a.studentName ?? a.studentPhone}
@@ -125,7 +125,7 @@ export default async function DashboardPage() {
           </ul>
         )}
         {arrears.length > 5 ? (
-          <Link href="/arrears" className="mt-2 inline-flex min-h-12 items-center text-sm font-semibold text-teal-800">
+          <Link href="/app/arrears" className="mt-2 inline-flex min-h-12 items-center text-sm font-semibold text-teal-800">
             See all {arrears.length} debts
           </Link>
         ) : null}
@@ -137,14 +137,14 @@ export default async function DashboardPage() {
             <p className="text-sm text-stone-700">
               Shift open — {shift.staffName}, float <Money pesewas={shift.float} />, since {formatTime(shift.openedAt)}
             </p>
-            <Link href="/shifts" className="inline-flex min-h-12 shrink-0 items-center rounded-md border border-stone-300 px-3 text-sm font-semibold">
+            <Link href="/app/shifts" className="inline-flex min-h-12 shrink-0 items-center rounded-md border border-stone-300 px-3 text-sm font-semibold">
               Close
             </Link>
           </div>
         ) : (
           <div className="flex items-center justify-between gap-3">
             <p className="text-sm text-stone-700">No shift open. Open one to track the drawer.</p>
-            <Link href="/shifts" className="inline-flex min-h-12 shrink-0 items-center rounded-md border border-stone-300 px-3 text-sm font-semibold">
+            <Link href="/app/shifts" className="inline-flex min-h-12 shrink-0 items-center rounded-md border border-stone-300 px-3 text-sm font-semibold">
               Open
             </Link>
           </div>

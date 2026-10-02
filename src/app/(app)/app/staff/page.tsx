@@ -17,7 +17,7 @@ export const metadata = { title: 'Staff · Lawmann Laundry' };
 export default async function StaffPage() {
   const session = await getSession();
   if (!session) return null;
-  if (session.role !== 'owner') redirect('/');
+  if (session.role !== 'owner') redirect('/app');
 
   await ensureBooted();
   const rows = await getDb().select().from(staff).orderBy(asc(staff.name));

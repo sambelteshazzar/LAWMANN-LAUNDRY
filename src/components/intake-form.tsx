@@ -103,7 +103,7 @@ function IntakeFormInner({ lists, onAnother }: { lists: IntakeLists; onAnother: 
         <div className="mt-6 flex flex-col gap-2">
           {state.orderId ? (
             <Link
-              href={`/orders/${state.orderId}`}
+              href={`/app/orders/${state.orderId}`}
               className="inline-flex min-h-12 items-center justify-center rounded-md border border-stone-300 bg-white px-5 font-semibold text-stone-800"
             >
               View this order
@@ -346,7 +346,7 @@ function IntakeFormInner({ lists, onAnother }: { lists: IntakeLists; onAnother: 
         {state.ok === false && state.orderId && state.orderNo ? (
           <p className="mb-3 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900">
             The bag was recorded as {state.orderNo}, but the payment failed. Take it from{' '}
-            <Link href={`/orders/${state.orderId}`} className="font-semibold underline">
+            <Link href={`/app/orders/${state.orderId}`} className="font-semibold underline">
               the order page
             </Link>
             .

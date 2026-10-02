@@ -39,7 +39,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
 
   return (
     <div className="mx-auto w-full max-w-md px-4 pb-32 pt-4 md:pb-12 print:max-w-none print:p-0">
-      <Link href={`/orders/${order.id}`} className="no-print mb-3 inline-flex min-h-12 items-center gap-1 text-sm font-semibold text-stone-600">
+      <Link href={`/app/orders/${order.id}`} className="no-print mb-3 inline-flex min-h-12 items-center gap-1 text-sm font-semibold text-stone-600">
         <BackIcon className="h-5 w-5" />
         Back to order
       </Link>

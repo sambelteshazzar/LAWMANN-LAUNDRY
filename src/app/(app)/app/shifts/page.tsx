@@ -21,7 +21,7 @@ function formatDateTime(d: Date): string {
 export default async function ShiftsPage() {
   const session = await getSession();
   if (!session) return null;
-  if (session.role === 'collector') redirect('/orders/new');
+  if (session.role === 'collector') redirect('/app/orders/new');
 
   await ensureBooted();
   const db = getDb();

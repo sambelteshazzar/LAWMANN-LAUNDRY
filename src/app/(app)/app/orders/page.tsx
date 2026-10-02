@@ -33,7 +33,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
       <div className="mb-4 flex items-start justify-between gap-3">
         <PageTitle title="Orders" hint={filter === 'open' ? 'Bags still in the shop.' : undefined} />
         <Link
-          href="/orders/new"
+          href="/app/orders/new"
           className="inline-flex min-h-12 shrink-0 items-center gap-1.5 rounded-md bg-teal-700 px-4 font-semibold text-white"
         >
           <PlusIcon className="h-5 w-5" />
@@ -48,7 +48,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
               key={tab.key}
               role="tab"
               aria-selected={active}
-              href={tab.key === 'open' ? '/orders' : `/orders?status=${tab.key}`}
+              href={tab.key === 'open' ? '/app/orders' : `/app/orders?status=${tab.key}`}
               className={`flex min-h-12 shrink-0 items-center rounded-full px-4 text-sm font-semibold ${
                 active ? 'bg-stone-900 text-white' : 'bg-white text-stone-600 ring-1 ring-inset ring-stone-200'
               }`}
@@ -68,7 +68,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
           <ul className="divide-y divide-stone-100">
             {orders.map((o) => (
               <li key={o.id}>
-                <Link href={`/orders/${o.id}`} className="flex min-h-16 items-center gap-3 py-2">
+                <Link href={`/app/orders/${o.id}`} className="flex min-h-16 items-center gap-3 py-2">
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-bold tabular-nums text-stone-900">{o.orderNo}</p>
                     <p className="truncate text-sm text-stone-500">

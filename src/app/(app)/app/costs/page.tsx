@@ -34,7 +34,7 @@ function todayISO(): string {
 export default async function CostsPage() {
   const session = await getSession();
   if (!session) return null;
-  if (session.role === 'collector') redirect('/orders/new');
+  if (session.role === 'collector') redirect('/app/orders/new');
 
   await ensureBooted();
   const now = new Date();

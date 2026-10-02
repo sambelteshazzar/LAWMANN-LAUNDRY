@@ -7,7 +7,7 @@ export const metadata = { title: 'Sign in · Lawmann Laundry' };
 
 export default async function LoginPage() {
   const session = await getSession();
-  if (session) redirect(session.role === 'collector' ? '/orders/new' : '/');
+  if (session) redirect(session.role === 'collector' ? '/app/orders/new' : '/app');
 
   const staff = await loginChoices();
   return (

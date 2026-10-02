@@ -21,7 +21,7 @@ function formatDate(d: Date | null): string {
 export default async function MessagesPage() {
   const session = await getSession();
   if (!session) return null;
-  if (session.role === 'collector') redirect('/orders/new');
+  if (session.role === 'collector') redirect('/app/orders/new');
 
   await ensureBooted();
   const messages = await getDb().select().from(smsMessage).orderBy(desc(smsMessage.createdAt)).limit(100);

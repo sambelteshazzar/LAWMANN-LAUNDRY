@@ -51,13 +51,13 @@ export async function loginAction(_prev: ActionState, formData: FormData): Promi
     maxAge: SESSION_MAX_AGE_SECONDS,
     path: '/',
   });
-  redirect(person.role === 'collector' ? '/orders/new' : '/');
+  redirect(person.role === 'collector' ? '/app/orders/new' : '/app');
 }
 
 export async function logoutAction(): Promise<void> {
   const jar = await cookies();
   jar.delete(SESSION_COOKIE);
-  redirect('/login');
+  redirect('/app/login');
 }
 
 export async function createStaffAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
@@ -82,7 +82,7 @@ export async function createStaffAction(_prev: ActionState, formData: FormData):
   } catch {
     return { ok: false, error: 'That name is already taken.' };
   }
-  revalidatePath('/staff');
+  revalidatePath('/app/staff');
   return { ok: true };
 }
 
@@ -97,7 +97,7 @@ export async function resetPinAction(_prev: ActionState, formData: FormData): Pr
   await ensureBooted();
   await getDb().update(staff).set({ pinHash: hashPin(pin) }).where(eq(staff.id, staffId));
   resetFailures(staffId);
-  revalidatePath('/staff');
+  revalidatePath('/app/staff');
   return { ok: true };
 }
 

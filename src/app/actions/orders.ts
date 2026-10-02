@@ -70,10 +70,10 @@ export async function createOrderAction(_prev: CreateOrderState, formData: FormD
   if (!result.ok) {
     return { ok: false, error: result.error, orderId: result.orderId, orderNo: result.orderNo };
   }
-  revalidatePath('/orders');
-  revalidatePath('/arrears');
-  revalidatePath('/messages');
-  revalidatePath('/');
+  revalidatePath('/app/orders');
+  revalidatePath('/app/arrears');
+  revalidatePath('/app/messages');
+  revalidatePath('/app');
   return { ok: true, orderId: result.orderId, orderNo: result.orderNo };
 }
 
@@ -110,12 +110,12 @@ export async function lookupStudentAction(phone: string): Promise<StudentLookupR
 const statusSchema = z.enum(['received', 'washing', 'ready', 'collected', 'cancelled']);
 
 function refreshOrder(orderId: string): void {
-  revalidatePath(`/orders/${orderId}`);
-  revalidatePath('/orders');
-  revalidatePath('/arrears');
-  revalidatePath('/messages');
-  revalidatePath('/activity');
-  revalidatePath('/');
+  revalidatePath(`/app/orders/${orderId}`);
+  revalidatePath('/app/orders');
+  revalidatePath('/app/arrears');
+  revalidatePath('/app/messages');
+  revalidatePath('/app/activity');
+  revalidatePath('/app');
 }
 
 export async function advanceStatusAction(_prev: ActionState, formData: FormData): Promise<ActionState> {

@@ -15,7 +15,7 @@ export const metadata = { title: 'Owing · Lawmann Laundry' };
 export default async function ArrearsPage() {
   const session = await getSession();
   if (!session) return null;
-  if (session.role === 'collector') redirect('/orders/new');
+  if (session.role === 'collector') redirect('/app/orders/new');
 
   await ensureBooted();
   const arrears = await arrearsList(getDb(), session.shopId);
@@ -47,7 +47,7 @@ export default async function ArrearsPage() {
                     <a href={`tel:${a.studentPhone}`} className="inline-flex min-h-12 items-center text-sm font-semibold text-teal-800 underline">
                       Call
                     </a>
-                    <Link href={`/orders/${a.orderId}`} className="inline-flex min-h-12 items-center text-sm font-semibold text-teal-800 underline">
+                    <Link href={`/app/orders/${a.orderId}`} className="inline-flex min-h-12 items-center text-sm font-semibold text-teal-800 underline">
                       Open order
                     </Link>
                   </p>
