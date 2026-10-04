@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { getSession } from '@/lib/session';
-import { secondaryItems } from '@/components/nav';
+import { secondaryItems } from '@/components/nav-data';
 import { Page, PageTitle } from '@/components/ui';
 
 export const metadata = { title: 'Menu · Lawmann Laundry' };
