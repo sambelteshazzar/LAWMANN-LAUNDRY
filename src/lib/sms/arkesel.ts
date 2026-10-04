@@ -1,7 +1,7 @@
 /**
- * Arkesel bulk SMS, the Ghanaian gateway. Endpoint verified live 2026-09-28:
- * POST with an api-key header and {send_to, from, sms}; an invalid key
- * returns 401 {"message":"Invalid key","status":"error"}.
+ * Arkesel bulk SMS, the Ghanaian gateway. V2 API:
+ * POST with an api-key header and {sender, message, recipients[]};
+ * an invalid key returns 401 {"message":"Invalid key","status":"error"}.
  *
  * A missing key is a normal state (dev, and the owner demo before signup),
  * not an error: the caller leaves the message queued and shows it.
@@ -42,6 +42,13 @@ function extractRef(payload: ArkeselPayload): string | undefined {
   return undefined;
 }
 
+export function toArkeselRecipient(phone: string): string {
+  const cleaned = phone.trim().replace(/[\s-]/g, '');
+  if (/^0\d{9}$/.test(cleaned)) return `233${cleaned.slice(1)}`;
+  if (/^\+233\d{9}$/.test(cleaned)) return cleaned.slice(1);
+  return cleaned;
+}
+
 export async function sendViaArkesel(phone: string, body: string): Promise<ArkeselResult> {
   const key = arkeselKey();
   if (!key) return { ok: false, error: 'SMS gateway not configured (ARKESEL_API_KEY).' };
@@ -51,7 +58,7 @@ export async function sendViaArkesel(phone: string, body: string): Promise<Arkes
     res = await fetch(ARKESEL_ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'api-key': key },
-      body: JSON.stringify({ send_to: phone, from: ARKESEL_SENDER, sms: body }),
+      body: JSON.stringify({ sender: ARKESEL_SENDER, message: body, recipients: [toArkeselRecipient(phone)] }),
     });
   } catch (err) {
     return { ok: false, error: `SMS gateway unreachable: ${err instanceof Error ? err.message : String(err)}` };
