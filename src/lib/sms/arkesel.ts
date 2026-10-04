@@ -8,7 +8,7 @@
  */
 
 export const ARKESEL_ENDPOINT = 'https://sms.arkesel.com/api/v2/sms/send';
-export const ARKESEL_SENDER = 'Lawmann';
+export const ARKESEL_SENDER = 'LAWMANN';
 
 export type ArkeselResult = { ok: true; ref?: string } | { ok: false; error: string };
 

@@ -133,7 +133,7 @@ describe('createOrder', () => {
     expect(messages[0]?.kind).toBe('accepted');
     expect(messages[0]?.toPhone).toBe('0241234567');
     expect(messages[0]?.body).toBe(
-      `Lawmann: bag received for Ama. 3.5kg, GH¢93. Balance owing GH¢43. Order ${result.orderNo}.`,
+      `LAWMANN: bag received for Ama. 3.5kg, GH¢93. Balance owing GH¢43. Order ${result.orderNo}.`,
     );
   });
 
@@ -243,7 +243,7 @@ describe('advanceStatus and cancelOrder', () => {
 
     const messages = await db.select().from(schema.smsMessage).orderBy(schema.smsMessage.createdAt);
     expect(messages.map((m) => m.kind)).toEqual(['accepted', 'ready']);
-    expect(messages[1]?.body).toBe(`Lawmann: your laundry is ready for collection. Order ${created.orderNo}.`);
+    expect(messages[1]?.body).toBe(`LAWMANN: your laundry is ready for collection. Order ${created.orderNo}.`);
   });
 
   it('a backwards move fails with the trigger’s own words', async () => {

@@ -17,7 +17,7 @@ describe('templates', () => {
   it('the accepted message carries weight, price, balance and order number', () => {
     expect(
       acceptedMessage({ name: 'Ama', weightGrams: grams(3500), grossPesewa: pesewas(9300), paidAllStatesPesewa: pesewas(5000), orderNo: 'LW-260928-003' }),
-    ).toBe('Lawmann: bag received for Ama. 3.5kg, GH¢93. Balance owing GH¢43. Order LW-260928-003.');
+    ).toBe('LAWMANN: bag received for Ama. 3.5kg, GH¢93. Balance owing GH¢43. Order LW-260928-003.');
   });
 
   it('an unnamed student still gets a readable message', () => {
@@ -26,9 +26,9 @@ describe('templates', () => {
   });
 
   it('ready and payment messages say exactly what the proposal promises', () => {
-    expect(readyMessage('LW-260928-003')).toBe('Lawmann: your laundry is ready for collection. Order LW-260928-003.');
+    expect(readyMessage('LW-260928-003')).toBe('LAWMANN: your laundry is ready for collection. Order LW-260928-003.');
     expect(paymentMessage(pesewas(5000), 'LW-260928-003', pesewas(4300))).toBe(
-      'Lawmann: GH¢50 received for LW-260928-003. Balance owing GH¢43.',
+      'LAWMANN: GH¢50 received for LW-260928-003. Balance owing GH¢43.',
     );
   });
 
@@ -58,7 +58,7 @@ describe('outbox', () => {
   let fx: ShopFixture;
 
   const enqueue = () =>
-    enqueueSms(db, { shopId: fx.shopId, orderId: null, kind: 'accepted', toPhone: '0241234567', body: 'Lawmann: test.' });
+    enqueueSms(db, { shopId: fx.shopId, orderId: null, kind: 'accepted', toPhone: '0241234567', body: 'LAWMANN: test.' });
 
   beforeAll(async () => {
     db = await freshDb();

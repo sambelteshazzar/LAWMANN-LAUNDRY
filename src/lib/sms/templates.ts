@@ -25,16 +25,16 @@ export function acceptedMessage(input: AcceptedMessageInput): string {
   const name = input.name?.trim() || 'you';
   const balance = input.grossPesewa - input.paidAllStatesPesewa;
   return (
-    `Lawmann: bag received for ${name}. ` +
+    `LAWMANN: bag received for ${name}. ` +
     `${weightLabel(input.weightGrams)}, ${moneyShort(input.grossPesewa)}. ` +
     `Balance owing ${moneyShort(balance)}. Order ${input.orderNo}.`
   );
 }
 
 export function readyMessage(orderNo: string): string {
-  return `Lawmann: your laundry is ready for collection. Order ${orderNo}.`;
+  return `LAWMANN: your laundry is ready for collection. Order ${orderNo}.`;
 }
 
 export function paymentMessage(amountPesewa: Pesewas, orderNo: string, balancePesewa: Pesewas): string {
-  return `Lawmann: ${moneyShort(amountPesewa)} received for ${orderNo}. Balance owing ${moneyShort(balancePesewa)}.`;
+  return `LAWMANN: ${moneyShort(amountPesewa)} received for ${orderNo}. Balance owing ${moneyShort(balancePesewa)}.`;
 }
