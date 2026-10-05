@@ -5,7 +5,7 @@ import { smsMessage } from '@/lib/db/schema';
 import { getSession } from '@/lib/session';
 import { EmptyState, Page, PageTitle, Section, StatusBadge } from '@/components/ui';
 import { ActionForm, SecondaryButton } from '@/components/form-buttons';
-import { sendAllAction } from '@/app/actions/ops';
+import { clearSentMessagesAction, deleteMessageAction, sendAllAction } from '@/app/actions/ops';
 
 export const metadata = { title: 'Messages · Lawmann Laundry' };
 
@@ -26,6 +26,8 @@ export default async function MessagesPage() {
   await ensureBooted();
   const messages = await getDb().select().from(smsMessage).orderBy(desc(smsMessage.createdAt)).limit(100);
   const waiting = messages.filter((m) => m.state === 'queued').length;
+  const sentCount = messages.filter((m) => m.state === 'sent' || m.state === 'failed').length;
+  const isOwner = session.role === 'owner';
   const configured = !!process.env.ARKESEL_API_KEY;
 
   return (
@@ -51,6 +53,15 @@ export default async function MessagesPage() {
           </ActionForm>
         </div>
       ) : null}
+      {isOwner && sentCount > 0 ? (
+        <div className="mb-4">
+          <ActionForm action={clearSentMessagesAction}>
+            <SecondaryButton>
+              Clear {sentCount} sent {sentCount === 1 ? 'message' : 'messages'}
+            </SecondaryButton>
+          </ActionForm>
+        </div>
+      ) : null}
       {messages.length === 0 ? (
         <EmptyState title="No messages yet." hint="Take a bag and the first “received” message lands here." />
       ) : (
@@ -65,6 +76,14 @@ export default async function MessagesPage() {
                   <span>{formatDate(m.createdAt)}</span>
                   {m.state === 'failed' && m.error ? <span className="text-red-700">{m.error}</span> : null}
                 </p>
+                {isOwner ? (
+                  <div className="mt-2 w-32">
+                    <ActionForm action={deleteMessageAction}>
+                      <input type="hidden" name="messageId" value={m.id} />
+                      <SecondaryButton>Delete</SecondaryButton>
+                    </ActionForm>
+                  </div>
+                ) : null}
               </li>
             ))}
           </ul>

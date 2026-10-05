@@ -5,7 +5,7 @@ import { staff } from '@/lib/db/schema';
 import { getSession } from '@/lib/session';
 import { Badge, Field, Page, PageTitle, Section, SelectInput, TextInput } from '@/components/ui';
 import { ActionForm, PrimaryButton, SecondaryButton } from '@/components/form-buttons';
-import { createStaffAction, resetPinAction, setStaffActiveAction } from '@/app/actions/auth';
+import { createStaffAction, deleteStaffAction, resetPinAction, setStaffActiveAction } from '@/app/actions/auth';
 
 export const metadata = { title: 'Staff · Lawmann Laundry' };
 
@@ -79,13 +79,21 @@ export default async function StaffPage() {
                     <Badge tone="stone">{s.role}</Badge>
                   </p>
                 </div>
-                <ActionForm action={setStaffActiveAction}>
-                  <input type="hidden" name="staffId" value={s.id} />
-                  <input type="hidden" name="active" value="true" />
-                  <div className="w-32 shrink-0">
-                    <SecondaryButton>Bring back</SecondaryButton>
-                  </div>
-                </ActionForm>
+                <div className="flex shrink-0 items-center gap-2">
+                  <ActionForm action={setStaffActiveAction}>
+                    <input type="hidden" name="staffId" value={s.id} />
+                    <input type="hidden" name="active" value="true" />
+                    <div className="w-32 shrink-0">
+                      <SecondaryButton>Bring back</SecondaryButton>
+                    </div>
+                  </ActionForm>
+                  <ActionForm action={deleteStaffAction}>
+                    <input type="hidden" name="staffId" value={s.id} />
+                    <div className="w-32 shrink-0">
+                      <SecondaryButton>Delete forever</SecondaryButton>
+                    </div>
+                  </ActionForm>
+                </div>
               </li>
             ))}
           </ul>

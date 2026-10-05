@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { and, eq, isNotNull } from 'drizzle-orm';
 import { getDb, ensureBooted } from '@/lib/db';
-import { staff } from '@/lib/db/schema';
+import { orderEvent, orders, payment, shift, staff } from '@/lib/db/schema';
 import { loginEligibleStaff, rowCanLogIn } from '@/lib/staff';
 import {
   SESSION_COOKIE,
@@ -138,6 +138,64 @@ export async function setStaffActiveAction(_prev: ActionState, formData: FormDat
     .update(staff)
     .set({ active })
     .where(and(eq(staff.id, staffId), eq(staff.shopId, session.shopId)));
+  revalidatePath('/app/staff');
+  return { ok: true };
+}
+
+export async function deleteStaffAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const session = await requireSession();
+  if (!canManageStaff(session.role)) return { ok: false, error: 'Only the owner manages staff.' };
+
+  const staffId = String(formData.get('staffId') ?? '');
+  if (!staffId) return { ok: false, error: 'Pick a staff member first.' };
+  if (staffId === session.staffId) return { ok: false, error: 'You cannot delete yourself.' };
+
+  await ensureBooted();
+  const db = getDb();
+  const rows = await db
+    .select()
+    .from(staff)
+    .where(and(eq(staff.id, staffId), eq(staff.shopId, session.shopId)));
+  const target = rows[0];
+  if (!target) return { ok: false, error: 'Staff not found.' };
+
+  if (target.role === 'owner' && target.active) {
+    const owners = await db
+      .select({ id: staff.id })
+      .from(staff)
+      .where(
+        and(
+          eq(staff.shopId, session.shopId),
+          eq(staff.role, 'owner'),
+          eq(staff.active, true),
+        ),
+      );
+    if (owners.length <= 1) {
+      return { ok: false, error: 'The shop needs at least one working owner.' };
+    }
+  }
+
+  const [touchedOrder] = await db
+    .select({ id: orders.id })
+    .from(orders)
+    .where(eq(orders.recordedBy, staffId))
+    .limit(1);
+  const [touchedPayment] = await db
+    .select({ id: payment.id })
+    .from(payment)
+    .where(eq(payment.recordedBy, staffId))
+    .limit(1);
+  const [touchedShift] = await db.select({ id: shift.id }).from(shift).where(eq(shift.staffId, staffId)).limit(1);
+  const [touchedEvent] = await db
+    .select({ id: orderEvent.id })
+    .from(orderEvent)
+    .where(eq(orderEvent.staffId, staffId))
+    .limit(1);
+  if (touchedOrder ?? touchedPayment ?? touchedShift ?? touchedEvent) {
+    return { ok: false, error: 'They have history — move to former staff instead. History stays.' };
+  }
+
+  await db.delete(staff).where(and(eq(staff.id, staffId), eq(staff.shopId, session.shopId)));
   revalidatePath('/app/staff');
   return { ok: true };
 }

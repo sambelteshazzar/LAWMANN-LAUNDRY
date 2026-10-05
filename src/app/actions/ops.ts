@@ -1,8 +1,10 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { and, eq, inArray } from 'drizzle-orm';
 import { getDb, ensureBooted } from '@/lib/db';
-import { requireSession } from '@/lib/session';
+import { smsMessage } from '@/lib/db/schema';
+import { canManageStaff, requireSession } from '@/lib/session';
 import { addCost } from '@/lib/costs';
 import { closeShift, openShift, type ShiftClose } from '@/lib/shifts';
 import { sendQueued } from '@/lib/sms/outbox';
@@ -100,6 +102,40 @@ export async function sendAllAction(_prev: ActionState): Promise<ActionState> {
   if (session.role === 'collector') return { ok: false, error: 'Only the counter or owner sends messages.' };
   await ensureBooted();
   await sendQueued(getDb());
+  refreshOps();
+  return { ok: true };
+}
+
+export async function deleteMessageAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  let session;
+  try {
+    session = await requireSession();
+  } catch {
+    return { ok: false, error: 'Sign in again.' };
+  }
+  if (!canManageStaff(session.role)) return { ok: false, error: 'Only the owner deletes messages.' };
+  const messageId = String(formData.get('messageId') ?? '');
+  if (!messageId) return { ok: false, error: 'Pick a message first.' };
+  await ensureBooted();
+  await getDb()
+    .delete(smsMessage)
+    .where(and(eq(smsMessage.id, messageId), eq(smsMessage.shopId, session.shopId)));
+  refreshOps();
+  return { ok: true };
+}
+
+export async function clearSentMessagesAction(_prev: ActionState): Promise<ActionState> {
+  let session;
+  try {
+    session = await requireSession();
+  } catch {
+    return { ok: false, error: 'Sign in again.' };
+  }
+  if (!canManageStaff(session.role)) return { ok: false, error: 'Only the owner clears messages.' };
+  await ensureBooted();
+  await getDb()
+    .delete(smsMessage)
+    .where(and(eq(smsMessage.shopId, session.shopId), inArray(smsMessage.state, ['sent', 'failed'])));
   refreshOps();
   return { ok: true };
 }
