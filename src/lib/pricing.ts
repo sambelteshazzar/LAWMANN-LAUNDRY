@@ -1,32 +1,30 @@
 /**
- * The tariff from the shop poster photographed 26 September 2026, with two
- * figures corrected verbally by the owner the same day.
- *
- * Two defects in the source data are recorded rather than silently patched, so
- * the next person does not "fix" them back.
- *
- * 1. BAND GAPS. The poster reads 0-3, 4-6, 7-9, 10-12, 13-15. Read literally,
- *    nothing prices a 3.5kg, 6.5kg, 9.5kg or 12.5kg bag, and a scale produces
- *    those constantly. The bands are read here as cumulative "up to" thresholds
- *    at 3kg intervals, which is the only reading under which the poster is a
- *    coherent tariff. This is an assumption awaiting the owner's confirmation,
- *    and it sets the price of roughly a quarter of bags.
- *
- * 2. NO CEILING. Nothing prices a bag above 15kg. resolveBand returns null
- *    rather than extrapolating, and quoteBand explains why, because a student
- *    washing before exams will exceed it in the first week.
+ * The tariff from the shop poster photographed 26 September 2026, with one
+ * figure corrected verbally by the owner the same day.
  *
  * The poster reads 83 for 4-6kg. The owner confirmed 93. The photograph has
  * glare across that column, and 93 is the owner's own figure, so 93 is used.
+ *
+ * The bands read 0-3, 4-6, 7-9, 10-12, 13-15, and nothing prices a bag above
+ * 15kg. Read literally, nothing prices a 3.5kg, 6.5kg, 9.5kg or 12.5kg bag
+ * either, and a scale produces those constantly. The owner settled the gaps
+ * on 9 October 2026: a reading that lands between two bands — 3.1 to 3.9,
+ * 6.1 to 6.9, and so on — prices at the band below it plus a GH¢5 surcharge.
+ * A decimal inside a band range, like 4.5kg, stays at the band price. A
+ * reading of 16.0kg and above still has no price and is spot-priced at the
+ * counter.
+ *
+ * Every surface that prices a bag — staff intake, its live quote, the seed,
+ * the reports buckets — goes through this file, so the rule is stated once.
  */
 
 import { grams, pesewas, type Grams, type Pesewas } from './money';
 
-/** False once the owner confirms the band edges in writing. */
-export const BAND_GAPS_ASSUMED = true;
+/** The owner's surcharge for a reading between two bands. */
+export const GAP_SURCHARGE = pesewas(500);
 
 export interface WeightBand {
-  /** Inclusive upper bound in grams. */
+  /** Inclusive upper bound in grams, as the poster prints it. */
   readonly to: Grams;
   readonly price: Pesewas;
   readonly label: string;
@@ -41,6 +39,9 @@ export const BANDS: readonly WeightBand[] = [
 ];
 
 export const MAX_BANDED = grams(15000);
+
+/** The heaviest reading that carries a price: the gap above the top band. */
+export const MAX_PRICED = grams(15900);
 
 export interface PiecePrice {
   readonly code: string;
@@ -77,42 +78,106 @@ export interface Quote {
   readonly method: PriceMethod;
   readonly total: Pesewas;
   readonly band: WeightBand | null;
-  /** Charge per kg at the top of the band, where the owner's margin is thinnest.
-   *  Reporting only. Never used to settle a payment. */
+  /** Charge per kg at the top of what was bought: the band's top, or the
+   *  gap's top, where the owner's margin is thinnest. Reporting only. Never
+   *  used to settle a payment. */
   readonly perKg: Pesewas | null;
   /** Set when there is no agreed price, so the collector can ask rather than guess. */
   readonly cannotPrice: string | null;
 }
 
+/** "3.1 – 3.9kg": the gap above a band top, labelled by any surface that shows rows. */
+export function gapRowLabel(bandTopGrams: Grams): string {
+  return `${bandTopGrams / 1000 + 0.1} – ${bandTopGrams / 1000 + 0.9}kg`;
+}
+
+/** The whole-kilo part of a reading, in grams: 3500g reads as a 3kg bag. */
+function wholeKilos(weight: Grams): Grams {
+  return Math.floor(weight / 1000) * 1000;
+}
+
+/**
+ * The band a reading prices against: the one whose top covers the reading's
+ * whole part. A 3.5kg bag is a 3kg bag, not a 6kg one. The half kilo over
+ * the top is the gap surcharge, never the next band up.
+ */
 export function bandFor(weight: Grams): WeightBand | null {
   if (weight <= 0) return null;
-  return BANDS.find((band) => weight <= band.to) ?? null;
+  const whole = wholeKilos(weight);
+  return BANDS.find((band) => whole <= band.to) ?? null;
 }
 
 export function quoteBand(weight: Grams): Quote {
-  const band = bandFor(weight);
+  if (weight <= 0) {
+    return { method: 'band', total: 0, band: null, perKg: null, cannotPrice: 'Weight must be more than zero.' };
+  }
 
+  const band = bandFor(weight);
   if (!band) {
     return {
       method: 'band',
       total: 0,
       band: null,
       perKg: null,
-      cannotPrice:
-        weight > MAX_BANDED
-          ? `No price covers ${weight / 1000}kg. The price list stops at 15kg.`
-          : 'Weight must be more than zero.',
+      cannotPrice: `No price covers ${weight / 1000}kg. The price list stops at ${MAX_PRICED / 1000}kg.`,
     };
   }
 
+  // A reading past the band's top is the gap the poster never priced: the
+  // band price plus the owner's surcharge.
+  const gap = weight > band.to;
+  const total = gap ? pesewas(band.price + GAP_SURCHARGE) : band.price;
+
   return {
     method: 'band',
-    total: band.price,
+    total,
     band,
-    perKg: perKgAt(band.price, band.to),
+    perKg: perKgAt(total, gap ? band.to + 900 : band.to),
     cannotPrice: null,
   };
 }
+
+export interface BandRow {
+  readonly toGrams: number;
+  readonly pricePesewa: number;
+}
+
+/**
+ * Prices a reading against a cumulative band table — the shape the database
+ * stores, so the owner can change prices without a code change. Staff intake
+ * and its live quote both price through here, which is why the gap rule
+ * lives in this file and not in two callers.
+ */
+export function priceAgainstBands(
+  bands: readonly BandRow[],
+  weightGrams: Grams,
+): { price: Pesewas } | { missing: string } {
+  if (weightGrams <= 0) return { missing: 'Weight must be more than zero.' };
+  const sorted = [...bands].sort((a, b) => a.toGrams - b.toGrams);
+  const whole = wholeKilos(weightGrams);
+  const band = sorted.find((b) => whole <= b.toGrams);
+  if (!band) {
+    const ceiling = sorted.length > 0 ? Math.max(...sorted.map((b) => b.toGrams)) + 900 : MAX_PRICED;
+    return { missing: `No price covers ${weightGrams / 1000}kg. The price list stops at ${ceiling / 1000}kg.` };
+  }
+  const gap = weightGrams > band.toGrams;
+  return { price: gap ? pesewas(band.pricePesewa + GAP_SURCHARGE) : (band.pricePesewa as Pesewas) };
+}
+
+export interface TariffRow {
+  readonly label: string;
+  readonly price: Pesewas;
+}
+
+/**
+ * The price list as a student reads it: every band, then the gap row above
+ * it. Two rows per band, because the gap row is where the owner's surcharge
+ * lives and a customer deserves to see it before the scale does.
+ */
+export const TARIFF_ROWS: readonly TariffRow[] = BANDS.flatMap((band) => [
+  { label: `Up to ${band.to / 1000}kg`, price: band.price },
+  { label: gapRowLabel(band.to), price: pesewas(band.price + GAP_SURCHARGE) },
+]);
 
 export interface PieceLine {
   readonly code: string;
@@ -160,10 +225,16 @@ export function perKgAt(price: Pesewas, weight: Grams): Pesewas {
 }
 
 /**
- * The band that earns the least per kilo. This is the number the owner's cost
- * has to stay under, and it is the headline in the proposal.
+ * The tariff row that earns the least per kilo. This is the number the
+ * owner's cost has to stay under, and it is the headline in the proposal.
+ * Gap rows count: a 12.9kg bag at GH¢133 earns GH¢10.31 per kilo, which is
+ * thinner than any whole band.
  */
-export function thinnestBand(): { band: WeightBand; perKg: Pesewas } {
-  const rated = BANDS.map((band) => ({ band, perKg: perKgAt(band.price, band.to) }));
-  return rated.reduce((worst, current) => (current.perKg < worst.perKg ? current : worst));
+export function thinnestBand(): { label: string; perKg: Pesewas } {
+  const rows: Array<{ label: string; perKg: Pesewas }> = [];
+  for (const band of BANDS) {
+    rows.push({ label: band.label, perKg: perKgAt(band.price, band.to) });
+    rows.push({ label: gapRowLabel(band.to), perKg: perKgAt(band.price + GAP_SURCHARGE, band.to + 900) });
+  }
+  return rows.reduce((worst, row) => (row.perKg < worst.perKg ? row : worst));
 }

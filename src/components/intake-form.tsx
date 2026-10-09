@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { PIECES } from '@/lib/pricing';
+import { PIECES, priceAgainstBands } from '@/lib/pricing';
 import { moneyShort } from '@/lib/money';
 import { Field, Money, Section, SelectInput, TextInput } from '@/components/ui';
 import { FormError, PrimaryButton } from '@/components/form-buttons';
@@ -69,9 +69,13 @@ function IntakeFormInner({ lists, onAnother }: { lists: IntakeLists; onAnother: 
   }, [phone]);
 
   const grams = parseKg(weightKg);
-  const band = grams !== null ? lists.bands.find((b) => grams <= b.toGrams) ?? null : null;
-  const overweight = grams !== null && band === null;
-  const ceilingKg = lists.bands.length > 0 ? Math.max(...lists.bands.map((b) => b.toGrams)) / 1000 : 15;
+  // The live quote mirrors the server: a reading between bands is the band
+  // below it plus the GH¢5 gap surcharge, never the next band up.
+  const quote = grams !== null ? priceAgainstBands(lists.bands, grams) : null;
+  const overweight = quote !== null && 'missing' in quote;
+  const band = grams !== null ? lists.bands.find((b) => Math.floor(grams / 1000) * 1000 <= b.toGrams) ?? null : null;
+  const gap = band !== null && grams !== null && grams > band.toGrams;
+  const ceilingKg = lists.bands.length > 0 ? (Math.max(...lists.bands.map((b) => b.toGrams)) + 900) / 1000 : 15.9;
 
   const pieceLines = Object.entries(qty).filter(([, q]) => q > 0);
   const pieceTotal = pieceLines.reduce((acc, [code, q]) => {
@@ -79,7 +83,7 @@ function IntakeFormInner({ lists, onAnother }: { lists: IntakeLists; onAnother: 
     return acc + (item ? item.price * q : 0);
   }, 0);
 
-  const gross = method === 'band' ? band?.pricePesewa ?? null : pieceTotal > 0 ? pieceTotal : null;
+  const gross = method === 'band' ? (quote !== null && !('missing' in quote) ? quote.price : null) : pieceTotal > 0 ? pieceTotal : null;
   const amountPesewa = parseGhs(amountGhs) ?? 0;
   const balance = gross !== null ? gross - (payChoice === 'none' ? 0 : amountPesewa) : null;
 
@@ -223,7 +227,11 @@ function IntakeFormInner({ lists, onAnother }: { lists: IntakeLists; onAnother: 
           <p className="mb-1 text-lg text-stone-900">
             <span className="font-bold tabular-nums">{moneyShort(gross)}</span>
             <span className="ml-2 text-sm text-stone-500">
-              {method === 'band' && band ? `up to ${band.toGrams / 1000}kg band` : `${pieceLines.reduce((n, [, q]) => n + q, 0)} items`}
+              {method === 'band' && band
+                ? gap
+                  ? `${band.toGrams / 1000}kg band + GH¢5`
+                  : `up to ${band.toGrams / 1000}kg band`
+                : `${pieceLines.reduce((n, [, q]) => n + q, 0)} items`}
             </span>
           </p>
         ) : null}

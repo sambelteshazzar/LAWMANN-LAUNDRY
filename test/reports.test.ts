@@ -166,10 +166,10 @@ describe('costPerKilo', () => {
 });
 
 describe('bandMix', () => {
-  it('buckets orders into the cumulative bands with earned per-kilo', async () => {
+  it('buckets orders the way they were priced, with earned per-kilo', async () => {
     const mix = await bandMix(db, fx.shopId, MONTH);
     expect(mix).toEqual([
-      { band: 'Up to 6kg', orders: 2, kilosGrams: 7000, revenuePesewa: 18600, perKiloPesewa: 2657 },
+      { band: '3.1 – 3.9kg', orders: 2, kilosGrams: 7000, revenuePesewa: 18600, perKiloPesewa: 2657 },
       { band: 'Up to 3kg', orders: 1, kilosGrams: 2000, revenuePesewa: 7300, perKiloPesewa: 3650 },
     ]);
   });

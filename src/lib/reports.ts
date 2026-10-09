@@ -2,6 +2,7 @@ import { and, eq, gte, inArray, lte, sql } from 'drizzle-orm';
 import * as schema from '@/lib/db/schema';
 import type { Db } from '@/lib/db';
 import type { Grams, Pesewas } from '@/lib/money';
+import { gapRowLabel } from '@/lib/pricing';
 
 /**
  * The owner's six questions plus the profit side, as queries. Two standing
@@ -261,11 +262,13 @@ export async function bandMix(db: Db, shopId: string, range: Range): Promise<Ban
 
   const buckets = new Map<string, { orders: number; kilosGrams: number; revenuePesewa: number }>();
   for (const row of orderRows) {
-    const band = bands.find((b) => (row.weightGrams as Grams) <= b.toGrams);
-    // Cannot happen through intake (creation blocks unbanded weights), but a
-    // deactivated band must never silently drop revenue from the table.
-    // Labels read cumulative ("Up to 6kg") — the assumed reading of the poster.
-    const label = band ? `Up to ${band.toGrams / 1000}kg` : 'No band';
+    // Orders bucket the way they were priced: a 3.5kg bag is a 3kg bag plus
+    // the gap surcharge, so it lands in the gap row, not the next band up.
+    const whole = Math.floor((row.weightGrams as Grams) / 1000) * 1000;
+    const band = bands.find((b) => whole <= b.toGrams);
+    const gap = band !== undefined && (row.weightGrams as Grams) > band.toGrams;
+    // A deactivated band must never silently drop revenue from the table.
+    const label = band ? (gap ? gapRowLabel(band.toGrams) : `Up to ${band.toGrams / 1000}kg`) : 'No band';
     const bucket = buckets.get(label) ?? { orders: 0, kilosGrams: 0, revenuePesewa: 0 };
     bucket.orders += 1;
     bucket.kilosGrams += row.weightGrams;

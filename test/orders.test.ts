@@ -59,16 +59,16 @@ afterAll(async () => {
 });
 
 describe('createOrder', () => {
-  it('prices a 3.5kg bag at GH¢93, stores a footing split, numbers the order', async () => {
+  it('prices a 3.5kg gap bag at GH¢78, stores a footing split, numbers the order', async () => {
     const result = await createOrder(db, intake(), session);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.orderNo).toMatch(/^LW-\d{6}-001$/);
 
     const detail = await getOrderDetail(db, result.orderId, session);
-    expect(detail?.order.gross).toBe(9300);
-    expect(detail?.order.base! + detail?.order.vat! + detail?.order.nhil! + detail?.order.getfund!).toBe(9300);
-    expect(detail?.balancePesewa).toBe(9300);
+    expect(detail?.order.gross).toBe(7800);
+    expect(detail?.order.base! + detail?.order.vat! + detail?.order.nhil! + detail?.order.getfund!).toBe(7800);
+    expect(detail?.balancePesewa).toBe(7800);
     expect(detail?.order.recordedBy).toBe(fx.staffId);
   });
 
@@ -97,7 +97,7 @@ describe('createOrder', () => {
     const result = await createOrder(db, intake({ weightKg: '16' }), session);
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.error).toContain('15kg');
+    expect(result.error).toContain('15.9kg');
     expect(await listOrders(db, session, 'all')).toHaveLength(0);
   });
 
@@ -133,7 +133,7 @@ describe('createOrder', () => {
     expect(messages[0]?.kind).toBe('accepted');
     expect(messages[0]?.toPhone).toBe('0241234567');
     expect(messages[0]?.body).toBe(
-      `LAWMANN: bag received for Ama. 3.5kg, GH¢93. Balance owing GH¢43. Order ${result.orderNo}.`,
+      `LAWMANN: bag received for Ama. 3.5kg, GH¢78. Balance owing GH¢28. Order ${result.orderNo}.`,
     );
   });
 
@@ -141,8 +141,8 @@ describe('createOrder', () => {
     await createOrder(db, intake({ phone: '0249999999' }), session);
     const found = await findStudentByPhone(db, fx.shopId, '+233249999999');
     expect(found?.student.name).toBe('Ama');
-    expect(found?.openBalancePesewa).toBe(9300);
-    expect(found?.oldestOpen?.balancePesewa).toBe(9300);
+    expect(found?.openBalancePesewa).toBe(7800);
+    expect(found?.oldestOpen?.balancePesewa).toBe(7800);
   });
 });
 
@@ -167,7 +167,7 @@ describe('takePayment and confirmMomoPayment', () => {
 
     const detail = await getOrderDetail(db, created.orderId, session);
     expect(detail?.paidPesewa).toBe(5000);
-    expect(detail?.balancePesewa).toBe(4300);
+    expect(detail?.balancePesewa).toBe(2800);
     expect(detail?.payments.map((p) => p.state)).toEqual(['confirmed', 'pending_momo']);
   });
 
@@ -201,7 +201,7 @@ describe('takePayment and confirmMomoPayment', () => {
     expect(cash.ok).toBe(true);
     const messages = await db.select().from(schema.smsMessage).orderBy(schema.smsMessage.createdAt);
     expect(messages.map((m) => m.kind)).toEqual(['accepted', 'payment']);
-    expect(messages[1]?.body).toContain('Balance owing GH¢73.');
+    expect(messages[1]?.body).toContain('Balance owing GH¢58.');
   });
 
   it('confirming a pending MoMo confirms it and texts the student; twice is a friendly error', async () => {
@@ -298,7 +298,7 @@ describe('listOrders', () => {
 
     const open = await listOrders(db, session, 'open');
     expect(open.map((o) => o.orderNo)).toEqual([a.orderNo]);
-    expect(open[0]?.balancePesewa).toBe(9300);
+    expect(open[0]?.balancePesewa).toBe(7800);
     expect(await listOrders(db, session, 'all')).toHaveLength(3);
     expect(await listOrders(db, session, 'cancelled')).toHaveLength(1);
   });

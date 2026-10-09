@@ -3,7 +3,7 @@ import * as schema from '@/lib/db/schema';
 import type { Db } from '@/lib/db';
 import { translateDbError } from '@/lib/errors';
 import { splitTaxInclusive } from '@/lib/tax';
-import { MAX_BANDED, PIECES } from '@/lib/pricing';
+import { PIECES, priceAgainstBands } from '@/lib/pricing';
 import type { Grams, Pesewas } from '@/lib/money';
 import { normalizePhone, type IntakeInput, type PaymentInput } from '@/lib/validation';
 import type { Session } from '@/lib/auth';
@@ -53,13 +53,14 @@ function failure(error: string, partial?: { orderId: string; orderNo: string }):
   return partial ? { ok: false, error, ...partial } : { ok: false, error };
 }
 
-/** Bands live in the database so the owner can change prices without a code change. */
+/** Bands live in the database so the owner can change prices without a code change.
+ *  The gap rule itself lives in pricing.ts, shared with the live quote at intake. */
 async function bandPrice(db: Db, weightGrams: Grams): Promise<{ price: Pesewas } | { missing: string }> {
   const rows = await db.select().from(schema.band).where(eq(schema.band.active, true)).orderBy(schema.band.toGrams);
-  const band = rows.find((r) => weightGrams <= r.toGrams);
-  if (band) return { price: band.price as Pesewas };
-  const ceiling = rows.length > 0 ? Math.max(...rows.map((r) => r.toGrams)) : MAX_BANDED;
-  return { missing: `No price covers ${weightGrams / 1000}kg. The price list stops at ${ceiling / 1000}kg.` };
+  return priceAgainstBands(
+    rows.map((r) => ({ toGrams: r.toGrams, pricePesewa: r.price })),
+    weightGrams,
+  );
 }
 
 function pieceTotal(lines: NonNullable<IntakeInput['pieces']>): { total: Pesewas } | { missing: string } {

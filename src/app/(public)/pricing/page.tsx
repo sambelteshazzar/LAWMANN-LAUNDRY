@@ -1,4 +1,4 @@
-import { BANDS, PIECES } from '@/lib/pricing';
+import { TARIFF_ROWS, PIECES } from '@/lib/pricing';
 import { money } from '@/lib/money';
 import { Kicker, PillLink, PublicPage, Section } from '@/components/public';
 
@@ -27,11 +27,11 @@ export default function PricingPage() {
                 </tr>
               </thead>
               <tbody>
-                {BANDS.map((band) => (
-                  <tr key={band.to} className="border-b border-stoneline/60 last:border-none">
-                    <td className="py-3 font-medium text-forest/80">Up to {band.to / 1000}kg</td>
+                {TARIFF_ROWS.map((row) => (
+                  <tr key={row.label} className="border-b border-stoneline/60 last:border-none">
+                    <td className="py-3 font-medium text-forest/80">{row.label}</td>
                     <td className="py-3 text-right font-display text-lg font-bold tabular-nums text-forest">
-                      {money(band.price)}
+                      {money(row.price)}
                     </td>
                   </tr>
                 ))}
@@ -70,8 +70,9 @@ export default function PricingPage() {
         </div>
 
         <p className="mt-8 max-w-xl rounded-3xl bg-clay-soft p-6 text-sm leading-relaxed text-forest/80">
-          Bags above 15kg: message us. The tariff stops at 15kg, so heavier bags are priced on the
-          spot, never guessed.
+          Read the scale to the tenth: a bag between two bands, like 3.5kg, prices at the
+          band below it plus GH¢5. Bags above 15.9kg: message us. Heavier bags are priced
+          on the spot, never guessed.
         </p>
         <div className="mt-8">
           <PillLink href="/">Back to the front page</PillLink>

@@ -71,8 +71,8 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
     kilo.perKiloPesewa === null
       ? 'Nothing was washed in this period, so there is no cost per kilo to judge.'
       : kilo.perKiloPesewa < thinnest.perKg
-        ? `Your cost per kilo is ${moneyShort(kilo.perKiloPesewa)}. Every band earns above that, including the thinnest, ${thinnest.band.label} at ${moneyShort(thinnest.perKg)} per kilo.`
-        : `Your cost per kilo is ${moneyShort(kilo.perKiloPesewa)}, above the ${thinnest.band.label} band's ${moneyShort(thinnest.perKg)} per kilo. That band is losing money on every full bag.`;
+        ? `Your cost per kilo is ${moneyShort(kilo.perKiloPesewa)}. Every band earns above that, including the thinnest, ${thinnest.label} at ${moneyShort(thinnest.perKg)} per kilo.`
+        : `Your cost per kilo is ${moneyShort(kilo.perKiloPesewa)}, above the thinnest row, ${thinnest.label} at ${moneyShort(thinnest.perKg)} per kilo. That row is losing money on every full bag.`;
 
   return (
     <Page>

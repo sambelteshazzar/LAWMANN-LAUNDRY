@@ -13,7 +13,7 @@
 import { eq } from 'drizzle-orm';
 import { getDb, ensureBooted, client } from '@/lib/db';
 import * as schema from '@/lib/db/schema';
-import { BANDS, bandFor } from '@/lib/pricing';
+import { BANDS, quoteBand } from '@/lib/pricing';
 import { grams } from '@/lib/money';
 import { splitTaxInclusive } from '@/lib/tax';
 import { hashPin } from '@/lib/auth';
@@ -143,8 +143,9 @@ async function main(): Promise<void> {
     const bagsToday = isSunday ? (rand() < 0.3 ? 1 : 0) : 1 + Math.floor(rand() * 2);
     for (let b = 0; b < bagsToday; b += 1) {
       const weight = pickWeight(rand);
-      const band = bandFor(grams(weight));
-      if (!band) throw new Error(`seed: weight ${weight} has no band`);
+      const quote = quoteBand(grams(weight));
+      if (quote.cannotPrice) throw new Error(`seed: weight ${weight} has no band`);
+      const gross = quote.total;
       const student = STUDENTS[Math.floor(rand() * STUDENTS.length)]!;
       const hostel = hostelNames[Math.floor(rand() * hostelNames.length)]!;
       const created = at(day, 8 + Math.floor(rand() * 9), Math.floor(rand() * 60));
@@ -152,7 +153,7 @@ async function main(): Promise<void> {
       const n = (dayCounters.get(key) ?? 0) + 1;
       dayCounters.set(key, n);
 
-      const split = splitTaxInclusive(band.price);
+      const split = splitTaxInclusive(gross);
       const recorder = rand() < 0.7 ? collectorId : counterId;
       const [order] = await db
         .insert(schema.orders)
@@ -166,7 +167,7 @@ async function main(): Promise<void> {
           status: 'received',
           weightGrams: weight,
           method: 'band',
-          gross: band.price,
+          gross,
           base: split.base,
           vat: split.vat,
           nhil: split.nhil,
@@ -214,14 +215,14 @@ async function main(): Promise<void> {
       const roll = rand();
       const paidAt = at(day, 9);
       if (roll < 0.55) {
-        await db.insert(schema.payment).values({ orderId: order.id, amount: band.price, method: 'cash', recordedBy: recorder, state: 'confirmed', paidAt });
+        await db.insert(schema.payment).values({ orderId: order.id, amount: gross, method: 'cash', recordedBy: recorder, state: 'confirmed', paidAt });
       } else if (roll < 0.7) {
-        await db.insert(schema.payment).values({ orderId: order.id, amount: band.price, method: 'momo', recordedBy: recorder, state: daysAgo > 2 ? 'confirmed' : 'pending_momo', gatewayRef: `MP${key.replaceAll('-', '')}.${1000 + Math.floor(rand() * 9000)}.A`, paidAt });
+        await db.insert(schema.payment).values({ orderId: order.id, amount: gross, method: 'momo', recordedBy: recorder, state: daysAgo > 2 ? 'confirmed' : 'pending_momo', gatewayRef: `MP${key.replaceAll('-', '')}.${1000 + Math.floor(rand() * 9000)}.A`, paidAt });
       } else if (roll < 0.82) {
-        const half = Math.round(band.price / 2);
+        const half = Math.round(gross / 2);
         await db.insert(schema.payment).values({ orderId: order.id, amount: half, method: 'cash', recordedBy: recorder, state: 'confirmed', paidAt });
         if (status === 'collected' || rand() < 0.5) {
-          await db.insert(schema.payment).values({ orderId: order.id, amount: band.price - half, method: 'cash', recordedBy: counterId, state: 'confirmed', paidAt: at(day, 16) });
+          await db.insert(schema.payment).values({ orderId: order.id, amount: gross - half, method: 'cash', recordedBy: counterId, state: 'confirmed', paidAt: at(day, 16) });
         }
       }
       // else: still owing — the arrears list needs residents.
@@ -233,7 +234,7 @@ async function main(): Promise<void> {
           orderId: order.id,
           kind: 'accepted',
           toPhone: student.phone,
-          body: acceptedMessage({ name: student.name, weightGrams: grams(weight), grossPesewa: band.price, paidAllStatesPesewa: 0, orderNo: order.orderNo }),
+          body: acceptedMessage({ name: student.name, weightGrams: grams(weight), grossPesewa: gross, paidAllStatesPesewa: 0, orderNo: order.orderNo }),
           state: 'queued',
           createdAt: created,
         });
