@@ -22,6 +22,13 @@
       "when": 1790961518724,
       "tag": "0002_chilly_prima",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791640827780,
+      "tag": "0003_slim_hitman",
+      "breakpoints": true
     }
   ]
 }

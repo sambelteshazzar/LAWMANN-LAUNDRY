@@ -28,6 +28,13 @@ import { runBoot, type SqlClient } from './migrate';
 
 export type Db = ReturnType<typeof drizzleOverPglite<typeof schema>>;
 
+/**
+ * The write surface both the singleton and a transaction handle expose.
+ * Helpers that may run inside db.transaction take this: the transaction
+ * carries the same query builders, and only $client lives outside it.
+ */
+export type Writable = Pick<Db, 'select' | 'insert' | 'update' | 'delete'>;
+
 interface DbGlobal {
   __lawmannPglite?: PGlite;
   __lawmannPool?: pg.Pool;

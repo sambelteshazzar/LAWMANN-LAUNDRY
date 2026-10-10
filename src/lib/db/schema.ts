@@ -55,7 +55,7 @@ export const costCategory = pgEnum('cost_category', [
   'maintenance',
   'other',
 ]);
-export const smsKind = pgEnum('sms_kind', ['accepted', 'ready', 'payment']);
+export const smsKind = pgEnum('sms_kind', ['accepted', 'ready', 'payment', 'corrected']);
 export const smsState = pgEnum('sms_state', ['queued', 'sent', 'failed']);
 
 export const shop = pgTable('shop', {
@@ -269,6 +269,39 @@ export const orderEvent = pgTable(
   (t) => [index('order_event_order').on(t.orderId, t.at)],
 );
 
+export const correctionField = pgEnum('correction_field', [
+  'weight',
+  'price',
+  'student',
+  'location',
+  'promised_date',
+]);
+
+/**
+ * One row per field a correction moved. A batch id groups the rows of one
+ * correction, so the activity feed reads one action as one line. The note
+ * rides every row, because an audit line without its reason is half a record.
+ */
+export const orderCorrection = pgTable(
+  'order_correction',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    batchId: uuid('batch_id').notNull(),
+    orderId: uuid('order_id')
+      .notNull()
+      .references(() => orders.id, { onDelete: 'cascade' }),
+    staffId: uuid('staff_id')
+      .notNull()
+      .references(() => staff.id),
+    field: correctionField('field').notNull(),
+    fromValue: text('from_value').notNull(),
+    toValue: text('to_value').notNull(),
+    note: text('note').notNull(),
+    at: timestamp('at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('order_correction_order').on(t.orderId, t.at)],
+);
+
 /** Column names this file expects, asserted against the live database at boot. */
 export const EXPECTED_COLUMNS = {
   orders: ['weight_grams', 'gross_pesewa', 'base_pesewa', 'vat_pesewa', 'nhil_pesewa', 'getfund_pesewa', 'recorded_by'],
@@ -276,6 +309,7 @@ export const EXPECTED_COLUMNS = {
   staff: ['pin_hash', 'active'],
   sms_message: ['kind', 'state', 'to_phone', 'body', 'sent_at'],
   order_event: ['from_status', 'to_status', 'staff_id', 'at'],
+  order_correction: ['batch_id', 'field', 'from_value', 'to_value', 'note', 'at'],
 } as const satisfies Record<string, readonly string[]>;
 
 export const moneyColumn = sql`bigint`;

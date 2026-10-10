@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { smsMessage } from '@/lib/db/schema';
-import type { Db } from '@/lib/db';
+import type { Db, Writable } from '@/lib/db';
 import { arkeselKey, sendViaArkesel } from './arkesel';
 
 /**
@@ -10,7 +10,7 @@ import { arkeselKey, sendViaArkesel } from './arkesel';
  * reason and a retry button. Nothing is ever faked as sent.
  */
 
-export type SmsKind = 'accepted' | 'ready' | 'payment';
+export type SmsKind = 'accepted' | 'ready' | 'payment' | 'corrected';
 
 export interface EnqueueInput {
   shopId: string;
@@ -20,7 +20,7 @@ export interface EnqueueInput {
   body: string;
 }
 
-export async function enqueueSms(db: Db, input: EnqueueInput): Promise<string> {
+export async function enqueueSms(db: Writable, input: EnqueueInput): Promise<string> {
   const rows = await db.insert(smsMessage).values(input).returning({ id: smsMessage.id });
   const id = rows[0]?.id;
   if (!id) throw new Error('enqueueSms failed to record the message');

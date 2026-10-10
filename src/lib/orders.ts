@@ -1,6 +1,6 @@
 import { and, desc, eq, inArray, like } from 'drizzle-orm';
 import * as schema from '@/lib/db/schema';
-import type { Db } from '@/lib/db';
+import type { Db, Writable } from '@/lib/db';
 import { translateDbError } from '@/lib/errors';
 import { splitTaxInclusive } from '@/lib/tax';
 import { PIECES, priceAgainstBands } from '@/lib/pricing';
@@ -74,13 +74,8 @@ function pieceTotal(lines: NonNullable<IntakeInput['pieces']>): { total: Pesewas
   return { total: total as Pesewas };
 }
 
-async function upsertStudent(
-  db: Db,
-  shopId: string,
-  phone: string,
-  name: string | undefined,
-  room: string | undefined,
-): Promise<typeof schema.student.$inferSelect> {
+/** Exported so a correction can resolve the right student inside its transaction. */
+export async function upsertStudent(db: Writable, shopId: string, phone: string, name: string | undefined, room: string | undefined): Promise<typeof schema.student.$inferSelect> {
   const existing = await db
     .select()
     .from(schema.student)
