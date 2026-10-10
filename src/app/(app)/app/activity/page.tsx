@@ -17,6 +17,7 @@ const KINDS: Array<{ key: string; label: string }> = [
   { key: 'cost', label: 'Costs' },
   { key: 'shift', label: 'Shifts' },
   { key: 'sms', label: 'Messages' },
+  { key: 'correction', label: 'Corrections' },
 ];
 
 const KIND_TONE: Record<string, string> = {
@@ -26,6 +27,7 @@ const KIND_TONE: Record<string, string> = {
   cost: 'bg-stone-100 text-stone-700',
   shift: 'bg-stone-100 text-stone-700',
   sms: 'bg-amber-50 text-amber-900',
+  correction: 'bg-orange-50 text-orange-900',
 };
 
 function todayISO(): string {

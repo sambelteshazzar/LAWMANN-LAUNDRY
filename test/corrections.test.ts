@@ -6,6 +6,7 @@ import { BANDS } from '@/lib/pricing';
 import { grams, pesewas } from '@/lib/money';
 import { intakeSchema } from '@/lib/validation';
 import { advanceStatus, createOrder, getOrderDetail } from '@/lib/orders';
+import { activityFeed } from '@/lib/activity';
 import { canCorrect, correctOrder, listCorrections } from '@/lib/corrections';
 import { splitTaxInclusive } from '@/lib/tax';
 import type { Session } from '@/lib/auth';
@@ -164,5 +165,21 @@ describe('correctOrder, piece orders', () => {
     expect(detail?.order.gross).toBe(1800);
     expect(detail?.order.weightGrams).toBe(3500);
     expect(await correctionsOf(created.orderId)).toEqual([['price', 'GH¢16', 'GH¢18']]);
+  });
+});
+
+describe('activity feed', () => {
+  it('shows one correction line per action, naming every field it moved', async () => {
+    const created = await createOrder(db, intake(), session);
+    if (!created.ok) throw new Error('setup failed');
+    const result = await correct(created.orderId, { weightGrams: grams(2900) });
+    expect(result.ok).toBe(true);
+
+    const feed = await activityFeed(db, fx.shopId, { kind: 'correction' });
+
+    expect(feed).toHaveLength(1);
+    expect(feed[0]?.who).toBe('Owner');
+    expect(feed[0]?.text).toContain('weight 3.5kg to 2.9kg');
+    expect(feed[0]?.text).toContain('price GH¢78 to GH¢73');
   });
 });

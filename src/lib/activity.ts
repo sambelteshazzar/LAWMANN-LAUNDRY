@@ -9,7 +9,7 @@ import type { Db } from '@/lib/db';
  * feed shows the entry rather than inventing one.
  */
 
-export type ActivityKind = 'order' | 'status' | 'payment' | 'cost' | 'shift' | 'sms';
+export type ActivityKind = 'order' | 'status' | 'payment' | 'cost' | 'shift' | 'sms' | 'correction';
 
 export interface ActivityFilter {
   day?: Date;
@@ -57,6 +57,19 @@ const UNION = `
   JOIN staff s ON s.id = e.staff_id
   WHERE o.shop_id = $1
   UNION ALL
+  SELECT c.at, 'correction', s.id, s.name, c.order_id, o.order_no,
+    NULL, NULL, NULL, NULL,
+    (
+      SELECT string_agg(c2.field::text || ' ' || c2.from_value || ' to ' || c2.to_value, ', ' ORDER BY c2.field)
+      FROM order_correction c2
+      WHERE c2.batch_id = c.batch_id
+    )
+  FROM order_correction c
+  JOIN orders o ON o.id = c.order_id
+  JOIN staff s ON s.id = c.staff_id
+  WHERE o.shop_id = $1
+    AND c.id = (SELECT min(c3.id::text)::uuid FROM order_correction c3 WHERE c3.batch_id = c.batch_id)
+  UNION ALL
   SELECT p.paid_at, 'payment', s.id, s.name, p.order_id, o.order_no,
     st.name, NULL, NULL, p.amount_pesewa, p.method::text || ' ' || p.state::text
   FROM payment p
@@ -101,6 +114,9 @@ function formatItem(r: FeedRow): ActivityItem {
       break;
     case 'status':
       text = `${who} marked ${r.order_no} ${r.detail ?? ''}`.trim();
+      break;
+    case 'correction':
+      text = `${who} corrected the fields of ${r.order_no}: ${r.detail ?? ''}`;
       break;
     case 'payment':
       text = `${who} took ${moneyShort(Number(r.amount_pesewa ?? 0))} ${r.detail ?? ''} ${r.order_no}`;
