@@ -121,6 +121,23 @@ export const paymentSchema = z
   });
 export type PaymentInput = z.infer<typeof paymentSchema>;
 
+/**
+ * The correction form's shape. Weight or total depending on how the order
+ * prices, which is the order's own fact, so the mismatch is refused in the
+ * lib with the order's own words rather than duplicated here.
+ */
+export const correctionSchema = z.object({
+  orderId: z.string().uuid(),
+  method: z.enum(['band', 'piece']),
+  weightKg: z.union([z.string(), z.number()]).optional(),
+  totalGhs: z.union([z.string(), z.number()]).optional(),
+  phone: phoneField,
+  locationId: z.string().uuid('Choose where the bag was taken.'),
+  promisedOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Pick the ready date.').optional().or(z.literal('')).default(''),
+  note: z.string().trim().min(3, 'Say why the record is changing.').max(120),
+});
+export type CorrectionInputForm = z.infer<typeof correctionSchema>;
+
 export const COST_CATEGORIES = [
   'gas',
   'electricity',

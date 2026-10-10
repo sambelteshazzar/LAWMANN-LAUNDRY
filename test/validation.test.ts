@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   COST_CATEGORIES,
+  correctionSchema,
   ghsToPesewas,
   intakeSchema,
   kgToGrams,
@@ -109,5 +110,47 @@ describe('cost categories', () => {
   it('are the nine the owner pays in real life', () => {
     expect([...COST_CATEGORIES]).toHaveLength(9);
     expect(COST_CATEGORIES).toContain('gas');
+  });
+});
+
+describe('correctionSchema', () => {
+  const base = {
+    orderId: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
+    method: 'band',
+    weightKg: '2.9',
+    phone: '0241234567',
+    locationId: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
+    note: 'scale slipped',
+  };
+
+  it('accepts a band correction and keeps the weight as typed', () => {
+    const parsed = correctionSchema.safeParse(base);
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+    expect(parsed.data.weightKg).toBe('2.9');
+    expect(parsed.data.promisedOn).toBe('');
+  });
+
+  it('accepts a piece correction with a total and no weight', () => {
+    const parsed = correctionSchema.safeParse({ ...base, method: 'piece', weightKg: undefined, totalGhs: '16' });
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+    expect(parsed.data.totalGhs).toBe('16');
+  });
+
+  it('treats an empty promised date as no date', () => {
+    const parsed = correctionSchema.safeParse({ ...base, promisedOn: '' });
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+    expect(parsed.data.promisedOn).toBe('');
+  });
+
+  it('refuses a note too short to explain anything', () => {
+    expect(correctionSchema.safeParse({ ...base, note: 'x' }).success).toBe(false);
+  });
+
+  it('refuses a bad phone and a bad promised date', () => {
+    expect(correctionSchema.safeParse({ ...base, phone: '12345' }).success).toBe(false);
+    expect(correctionSchema.safeParse({ ...base, promisedOn: '16/10/2026' }).success).toBe(false);
   });
 });
