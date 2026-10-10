@@ -412,7 +412,7 @@ describe('correctOrder, band orders', () => {
 
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.error).toContain('nothing is different');
+    expect(result.error).toContain('Nothing is different');
   });
 
   it('refuses a collected order and a cancelled one, in words', async () => {
@@ -574,7 +574,10 @@ export async function correctOrder(
     if (input.weightGrams === null) return failure('That order prices by weight, so give the corrected weight.');
     if (input.totalPesewa !== null) return failure('That order prices by weight, so clear the price field.');
     const bandRows = await db.select().from(schema.band).where(eq(schema.band.active, true)).orderBy(asc(schema.band.toGrams));
-    const priced = priceAgainstBands(bandRows, input.weightGrams);
+    const priced = priceAgainstBands(
+      bandRows.map((r) => ({ toGrams: r.toGrams, pricePesewa: r.price })),
+      input.weightGrams,
+    );
     if ('missing' in priced) return failure(priced.missing);
     weightGrams = input.weightGrams;
     gross = priced.price;
