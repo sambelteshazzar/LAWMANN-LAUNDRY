@@ -1301,10 +1301,12 @@ Insert this branch into the `UNION` constant, after the `order_event` branch and
   JOIN orders o ON o.id = c.order_id
   JOIN staff s ON s.id = c.staff_id
   WHERE o.shop_id = $1
-    AND c.id = (SELECT min(c3.id) FROM order_correction c3 WHERE c3.batch_id = c.batch_id)
+    AND c.id = (SELECT min(c3.id::text)::uuid FROM order_correction c3 WHERE c3.batch_id = c.batch_id)
 ```
 
-The `min(c3.id)` guard is what makes one batch render as one line: only the batch's first row is selected, and the correlated `string_agg` gathers every field that batch moved. `ORDER BY c2.field` sorts by the enum's declared order, which is exactly the diff order in `correctOrder`.
+The cast to text is required: Postgres has no `min(uuid)` aggregate, and PGlite refuses the query the same way. The guard still selects exactly one row per batch while the correlated `string_agg` gathers every field that batch moved, and which row it picks is unobservable, because every column the branch reads off `c` (`at`, `order_id`, `staff_id`, `batch_id`) is identical within a batch.
+
+The `min(c3.id::text)::uuid` guard is what makes one batch render as one line: only the batch's first row is selected, and the correlated `string_agg` gathers every field that batch moved. The uuid is cast to text because Postgres has no `min(uuid)` aggregate. `ORDER BY c2.field` sorts by the enum's declared order, which is exactly the diff order in `correctOrder`.
 
 Add the case to `formatItem`:
 
