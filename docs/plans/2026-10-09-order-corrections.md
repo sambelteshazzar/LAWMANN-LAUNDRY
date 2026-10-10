@@ -843,7 +843,7 @@ export const correctionSchema = z.object({
   totalGhs: z.union([z.string(), z.number()]).optional(),
   phone: phoneField,
   locationId: z.string().uuid('Choose where the bag was taken.'),
-  promisedOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Pick the ready date.').optional().or(z.literal('')),
+  promisedOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Pick the ready date.').optional().or(z.literal('')).default(''),
   note: z.string().trim().min(3, 'Say why the record is changing.').max(120),
 });
 export type CorrectionInputForm = z.infer<typeof correctionSchema>;
