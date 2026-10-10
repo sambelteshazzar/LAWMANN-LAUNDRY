@@ -183,3 +183,99 @@ describe('activity feed', () => {
     expect(feed[0]?.text).toContain('price GH¢78 to GH¢73');
   });
 });
+
+describe('correctOrder, the student and the money', () => {
+  it('moves the order to the right student and deletes the vacated row', async () => {
+    const created = await createOrder(db, intake({ phone: '0249999999', name: 'Ama' }), session);
+    if (!created.ok) throw new Error('setup failed');
+
+    const result = await correct(created.orderId, { weightGrams: grams(2000), phone: '0241234567', note: 'wrong student, phone typo' });
+
+    expect(result.ok).toBe(true);
+    const detail = await getOrderDetail(db, created.orderId, session);
+    expect(detail?.student.phone).toBe('0241234567');
+    const students = await db.select({ phone: schema.student.phone }).from(schema.student);
+    expect(students.map((s) => s.phone)).toEqual(['0241234567']);
+    expect(await correctionsOf(created.orderId)).toEqual([
+      ['weight', '3.5kg', '2kg'],
+      ['price', 'GH¢78', 'GH¢73'],
+      ['student', '0249999999', '0241234567'],
+    ]);
+  });
+
+  it('keeps a student row that still has another order', async () => {
+    const first = await createOrder(db, intake({ phone: '0249999999' }), session);
+    const second = await createOrder(db, intake({ orderId: crypto.randomUUID(), phone: '0249999999' }), session);
+    if (!first.ok || !second.ok) throw new Error('setup failed');
+
+    const result = await correct(first.orderId, { weightGrams: grams(2000), phone: '0241234567', note: 'wrong student, phone typo' });
+
+    expect(result.ok).toBe(true);
+    const students = await db.select({ phone: schema.student.phone }).from(schema.student);
+    expect(students.map((s) => s.phone).sort()).toEqual(['0241234567', '0249999999']);
+  });
+
+  it('a downward correction below what was paid leaves a negative balance and names the refund', async () => {
+    const created = await createOrder(db, intake({ payment: { method: 'cash', amount: '78' } }), session);
+    if (!created.ok) throw new Error('setup failed');
+
+    const result = await correct(created.orderId, { weightGrams: grams(2900) });
+
+    expect(result.ok).toBe(true);
+    const detail = await getOrderDetail(db, created.orderId, session);
+    expect(detail?.balancePesewa).toBe(-500);
+    const corrected = (await db.select().from(schema.smsMessage)).filter((m) => m.kind === 'corrected');
+    expect(corrected).toHaveLength(1);
+    expect(corrected[0]?.body).toContain('Refund due GH¢5');
+  });
+
+  it('a money correction texts the student once', async () => {
+    const created = await createOrder(db, intake(), session);
+    if (!created.ok) throw new Error('setup failed');
+
+    const result = await correct(created.orderId, { weightGrams: grams(2900) });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.smsQueued).toBe(true);
+    const corrected = (await db.select().from(schema.smsMessage)).filter((m) => m.kind === 'corrected');
+    expect(corrected).toHaveLength(1);
+    expect(corrected[0]?.body).toBe('LAWMANN: order ' + created.orderNo + ' corrected to 2.9kg, GH¢73. Balance owing GH¢73.');
+  });
+
+  it('a date-only correction texts nobody', async () => {
+    const created = await createOrder(db, intake(), session);
+    if (!created.ok) throw new Error('setup failed');
+
+    const result = await correct(created.orderId, { promisedOn: '2026-10-16', note: 'student asked for later' });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.smsQueued).toBe(false);
+    expect((await db.select().from(schema.smsMessage)).filter((m) => m.kind === 'corrected')).toHaveLength(0);
+    expect(await correctionsOf(created.orderId)).toEqual([['promised_date', 'none', '2026-10-16']]);
+  });
+
+  it('listCorrections reads the trail back with who and when', async () => {
+    const created = await createOrder(db, intake(), session);
+    if (!created.ok) throw new Error('setup failed');
+    await correct(created.orderId, { weightGrams: grams(2900) });
+
+    const rows = await listCorrections(db, created.orderId);
+
+    expect(rows.map((r) => r.field)).toEqual(['weight', 'price']);
+    expect(rows[0]?.staffName).toBe('Owner');
+    expect(rows[0]?.note).toBe('scale slipped');
+    expect(rows[0]?.at).toBeInstanceOf(Date);
+  });
+
+  it('refuses a method mismatch in the order’s own words', async () => {
+    const created = await createOrder(db, intake(), session);
+    if (!created.ok) throw new Error('setup failed');
+
+    const withPrice = await correct(created.orderId, { totalPesewa: pesewas(5000) });
+    expect(withPrice.ok).toBe(false);
+    if (withPrice.ok) return;
+    expect(withPrice.error).toContain('prices by weight');
+  });
+});

@@ -100,25 +100,30 @@ export async function correctOrder(
   const location = targetLocations[0];
   if (!location) return failure('Choose where the bag was taken.');
 
-  // The intended record, priced exactly as intake prices it.
+  // The intended record, priced exactly as intake prices it. A null weight or
+  // total with no cross-method figure is a date, location, or student-only
+  // correction: the money keeps its stored figure and the diff finds nothing
+  // about it to audit.
   let weightGrams = order.weightGrams as Grams;
   let gross = order.gross as Pesewas;
   if (order.method === 'band') {
-    if (input.weightGrams === null) return failure('That order prices by weight, so give the corrected weight.');
     if (input.totalPesewa !== null) return failure('That order prices by weight, so clear the price field.');
-    const bandRows = await db.select().from(schema.band).where(eq(schema.band.active, true)).orderBy(asc(schema.band.toGrams));
-    const priced = priceAgainstBands(
-      bandRows.map((r) => ({ toGrams: r.toGrams, pricePesewa: r.price })),
-      input.weightGrams,
-    );
-    if ('missing' in priced) return failure(priced.missing);
-    weightGrams = input.weightGrams;
-    gross = priced.price;
+    if (input.weightGrams !== null) {
+      const bandRows = await db.select().from(schema.band).where(eq(schema.band.active, true)).orderBy(asc(schema.band.toGrams));
+      const priced = priceAgainstBands(
+        bandRows.map((r) => ({ toGrams: r.toGrams, pricePesewa: r.price })),
+        input.weightGrams,
+      );
+      if ('missing' in priced) return failure(priced.missing);
+      weightGrams = input.weightGrams;
+      gross = priced.price;
+    }
   } else {
-    if (input.totalPesewa === null) return failure('That order prices by the item, so give the corrected total.');
     if (input.weightGrams !== null) return failure('That order prices by the item, so clear the weight field.');
-    if (input.totalPesewa <= 0) return failure('The corrected total must be more than zero.');
-    gross = input.totalPesewa;
+    if (input.totalPesewa !== null) {
+      if (input.totalPesewa <= 0) return failure('The corrected total must be more than zero.');
+      gross = input.totalPesewa;
+    }
   }
 
   const promisedAt = promisedTimestamp(input.promisedOn);
