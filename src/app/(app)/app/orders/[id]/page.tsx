@@ -1,13 +1,14 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { asc, eq } from 'drizzle-orm';
+import { and, asc, eq } from 'drizzle-orm';
 import { getDb, ensureBooted } from '@/lib/db';
-import { smsMessage } from '@/lib/db/schema';
+import { band, location as locationTable, smsMessage } from '@/lib/db/schema';
 import { getSession } from '@/lib/session';
 import { getOrderDetail, type OrderStatus } from '@/lib/orders';
 import { moneyShort, weightLabel } from '@/lib/money';
 import { Badge, Money, Page, Section, StatusBadge } from '@/components/ui';
-import { PaymentForm, PrintButton, StatusMoveForm, ConfirmMomoForm, CancelOrderForm } from '@/components/order-detail-actions';
+import { canCorrect, correctionLabel, listCorrections } from '@/lib/corrections';
+import { CorrectionForm, PaymentForm, PrintButton, StatusMoveForm, ConfirmMomoForm, CancelOrderForm } from '@/components/order-detail-actions';
 import { BackIcon } from '@/components/icons';
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
@@ -51,9 +52,34 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
     .where(eq(smsMessage.orderId, id))
     .orderBy(asc(smsMessage.createdAt));
 
+  const corrections = await listCorrections(db, id);
+  const canFix = canCorrect(session.role) && ['received', 'washing', 'ready'].includes(detail.order.status);
+  const correctionLists = canFix
+    ? {
+        locations: await db
+          .select({ id: locationTable.id, name: locationTable.name })
+          .from(locationTable)
+          .where(and(eq(locationTable.shopId, session.shopId), eq(locationTable.active, true)))
+          .orderBy(asc(locationTable.name)),
+        bands: await db
+          .select({ toGrams: band.toGrams, pricePesewa: band.price })
+          .from(band)
+          .where(eq(band.active, true))
+          .orderBy(asc(band.toGrams)),
+      }
+    : null;
+
   const moves = NEXT_MOVES[detail.order.status] ?? [];
   const canVerifyMoney = session.role !== 'collector';
   const { order, student, location } = detail;
+
+  const history = [
+    ...detail.events.map((e) => ({ at: e.at, text: `${e.from} → ${e.to} · ${e.staffName}` })),
+    ...corrections.map((c) => ({
+      at: c.at,
+      text: `${correctionLabel(c.field)}: ${c.fromValue} to ${c.toValue} · ${c.staffName}${c.note ? ` · ${c.note}` : ''}`,
+    })),
+  ].sort((a, b) => a.at.getTime() - b.at.getTime());
 
   return (
     <Page>
@@ -114,8 +140,18 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
           </div>
           <div className="flex justify-between gap-3 border-t border-stone-200 pt-1 text-base">
             <dt className="font-semibold">Still owing</dt>
-            <dd className={`font-bold tabular-nums ${detail.balancePesewa > 0 ? 'text-red-700' : 'text-green-700'}`}>
-              {detail.balancePesewa > 0 ? <Money pesewas={detail.balancePesewa} /> : 'Settled'}
+            <dd
+              className={`font-bold tabular-nums ${
+                detail.balancePesewa > 0 ? 'text-red-700' : detail.balancePesewa < 0 ? 'text-amber-700' : 'text-green-700'
+              }`}
+            >
+              {detail.balancePesewa > 0 ? (
+                <Money pesewas={detail.balancePesewa} />
+              ) : detail.balancePesewa < 0 ? (
+                `Refund due ${moneyShort(-detail.balancePesewa)}`
+              ) : (
+                'Settled'
+              )}
             </dd>
           </div>
         </dl>
@@ -160,15 +196,37 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
         </Section>
       ) : null}
 
-      {detail.events.length > 0 ? (
+      {canFix && correctionLists ? (
+        <details className="rounded-lg border border-stone-200 bg-white">
+          <summary className="flex min-h-12 cursor-pointer items-center px-4 text-sm font-semibold text-stone-700">
+            Correct this order
+          </summary>
+          <div className="border-t border-stone-100 p-4">
+            <CorrectionForm
+              order={{
+                id: order.id,
+                orderNo: order.orderNo,
+                method: order.method,
+                weightGrams: order.weightGrams,
+                gross: order.gross,
+                promisedOn: order.promisedAt ? order.promisedAt.toISOString().slice(0, 10) : '',
+              }}
+              studentPhone={student.phone}
+              locationId={location.id}
+              locations={correctionLists.locations}
+              bands={correctionLists.bands}
+            />
+          </div>
+        </details>
+      ) : null}
+
+      {history.length > 0 ? (
         <Section title="History">
           <ul className="space-y-1 text-sm text-stone-600">
-            {detail.events.map((e, i) => (
-              <li key={i} className="flex justify-between gap-3">
-                <span>
-                  {e.from} → {e.to} · {e.staffName}
-                </span>
-                <span className="tabular-nums">{formatDate(e.at)}</span>
+            {history.map((h, i) => (
+              <li key={`${h.at.getTime()}-${i}`} className="flex justify-between gap-3">
+                <span>{h.text}</span>
+                <span className="tabular-nums">{formatDate(h.at)}</span>
               </li>
             ))}
           </ul>
