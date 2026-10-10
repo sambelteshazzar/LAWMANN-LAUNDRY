@@ -38,3 +38,19 @@ export function readyMessage(orderNo: string): string {
 export function paymentMessage(amountPesewa: Pesewas, orderNo: string, balancePesewa: Pesewas): string {
   return `LAWMANN: ${moneyShort(amountPesewa)} received for ${orderNo}. Balance owing ${moneyShort(balancePesewa)}.`;
 }
+
+/**
+ * The amended text. The order number leads, because that is the thing the
+ * student copied down. The weight is dropped for piece-priced orders, which
+ * have no weight price. A negative balance is a refund owed, not a balance.
+ */
+export function correctedMessage(orderNo: string, weight: string | null, grossPesewa: Pesewas, balancePesewa: Pesewas): string {
+  const what = weight ? `corrected to ${weight}, ${moneyShort(grossPesewa)}` : `corrected to ${moneyShort(grossPesewa)}`;
+  const balance =
+    balancePesewa > 0
+      ? `Balance owing ${moneyShort(balancePesewa)}.`
+      : balancePesewa < 0
+        ? `Refund due ${moneyShort(-balancePesewa)}.`
+        : 'Paid in full.';
+  return `LAWMANN: order ${orderNo} ${what}. ${balance}`;
+}

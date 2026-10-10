@@ -7,6 +7,7 @@ import { grams, pesewas } from '@/lib/money';
 import {
   SMS_SEGMENT_LIMIT,
   acceptedMessage,
+  correctedMessage,
   paymentMessage,
   readyMessage,
 } from '@/lib/sms/templates';
@@ -32,6 +33,18 @@ describe('templates', () => {
     );
   });
 
+  it('a corrected message names the order, the new figure, and the balance', () => {
+    expect(correctedMessage('LW-261009-014', '2.9kg', pesewas(7300), pesewas(0))).toBe(
+      'LAWMANN: order LW-261009-014 corrected to 2.9kg, GH¢73. Paid in full.',
+    );
+    expect(correctedMessage('LW-261009-014', null, pesewas(7300), pesewas(2800))).toBe(
+      'LAWMANN: order LW-261009-014 corrected to GH¢73. Balance owing GH¢28.',
+    );
+    expect(correctedMessage('LW-261009-014', '2.9kg', pesewas(7300), pesewas(-500))).toBe(
+      'LAWMANN: order LW-261009-014 corrected to 2.9kg, GH¢73. Refund due GH¢5.',
+    );
+  });
+
   it('every template stays within one SMS segment', () => {
     fc.assert(
       fc.property(
@@ -43,6 +56,7 @@ describe('templates', () => {
             acceptedMessage({ name, weightGrams: grams(weight), grossPesewa: pesewas(9300), paidAllStatesPesewa: pesewas(paid), orderNo: 'LW-260928-003' }),
             readyMessage('LW-260928-003'),
             paymentMessage(pesewas(5000), 'LW-260928-003', pesewas(4300)),
+            correctedMessage('LW-260928-003', '2.9kg', pesewas(7300), pesewas(4300)),
           ];
           for (const body of bodies) expect(body.length).toBeLessThanOrEqual(SMS_SEGMENT_LIMIT);
         },
