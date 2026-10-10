@@ -960,23 +960,25 @@ In `src/app/(app)/app/orders/[id]/page.tsx`, extend these imports:
 
 ```ts
 import { and, asc, eq } from 'drizzle-orm';   // the existing import gains `and`
-import { band, location, smsMessage } from '@/lib/db/schema';   // the existing import gains `band` and `location`
+import { band, location as locationTable, smsMessage } from '@/lib/db/schema';   // the existing import gains `band` and an aliased `locationTable`
 import { canCorrect, correctionLabel, listCorrections } from '@/lib/corrections';
 import { CorrectionForm } from '@/components/order-detail-actions';
 ```
+
+The table import is aliased because the page later destructures `const { order, student, location } = detail;`, which shadows a table named `location` for the rest of the function body.
 
 After the existing `const detail = await getOrderDetail(db, id, session);` and the `messages` query, add:
 
 ```ts
   const corrections = await listCorrections(db, id);
-  const canFix = canCorrect(session.role) && ['received', 'washing', 'ready'].includes(order.status);
+  const canFix = canCorrect(session.role) && ['received', 'washing', 'ready'].includes(detail.order.status);
   const correctionLists = canFix
     ? {
         locations: await db
-          .select({ id: location.id, name: location.name })
-          .from(location)
-          .where(and(eq(location.shopId, session.shopId), eq(location.active, true)))
-          .orderBy(asc(location.name)),
+          .select({ id: locationTable.id, name: locationTable.name })
+          .from(locationTable)
+          .where(and(eq(locationTable.shopId, session.shopId), eq(locationTable.active, true)))
+          .orderBy(asc(locationTable.name)),
         bands: await db
           .select({ toGrams: band.toGrams, pricePesewa: band.price })
           .from(band)
@@ -985,6 +987,8 @@ After the existing `const detail = await getOrderDetail(db, id, session);` and t
       }
     : null;
 ```
+
+`canFix` reads `detail.order.status`, not `order.status`, because the `const { order, ... } = detail` destructuring sits below this point in the function.
 
 - [ ] **Step 2: Merge the history and add the refund-due line**
 
@@ -1084,7 +1088,17 @@ import { priceAgainstBands } from '@/lib/pricing';
 import { correctOrderAction } from '@/app/actions/corrections';
 ```
 
-`moneyShort`, `Field`, `TextInput`, `SelectInput`, `FormError`, and `PrimaryButton` are already imported in that file. Append:
+`moneyShort`, `Field`, and `TextInput` are already imported in that file. `SelectInput` must be added to the `@/components/ui` import and `FormError` to the `@/components/form-buttons` import, so those two lines read:
+
+```ts
+import { Field, Money, Section, SelectInput, TextInput } from '@/components/ui';
+```
+
+```ts
+import { ActionForm, DangerButton, FormError, PrimaryButton, SecondaryButton } from '@/components/form-buttons';
+```
+
+Append:
 
 ```tsx
 /**
