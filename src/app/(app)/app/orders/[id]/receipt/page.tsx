@@ -126,9 +126,9 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
             ))
           )}
           <div className="flex justify-between gap-3 pt-1 text-base">
-            <dt className="font-semibold">Balance owing</dt>
+            <dt className="font-semibold">{detail.balancePesewa < 0 ? 'Refund due' : 'Balance owing'}</dt>
             <dd className="font-bold tabular-nums">
-              <Money pesewas={detail.balancePesewa} />
+              {detail.balancePesewa === 0 ? 'Settled' : <Money pesewas={Math.abs(detail.balancePesewa)} />}
             </dd>
           </div>
         </dl>
