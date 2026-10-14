@@ -2,12 +2,14 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { and, asc, eq } from 'drizzle-orm';
 import { getDb, ensureBooted } from '@/lib/db';
-import { band, location as locationTable, smsMessage } from '@/lib/db/schema';
+import { band, location as locationTable, orderItem, smsMessage } from '@/lib/db/schema';
 import { getSession } from '@/lib/session';
 import { getOrderDetail, type OrderStatus } from '@/lib/orders';
 import { moneyShort, weightLabel } from '@/lib/money';
 import { Badge, Money, Page, Section, StatusBadge } from '@/components/ui';
 import { canCorrect, correctionLabel, listCorrections } from '@/lib/corrections';
+import { canPhotograph, listConditionPhotos } from '@/lib/condition';
+import { ConditionCamera } from '@/components/condition-photos';
 import { CorrectionForm, PaymentForm, PrintButton, StatusMoveForm, ConfirmMomoForm, CancelOrderForm } from '@/components/order-detail-actions';
 import { BackIcon } from '@/components/icons';
 
@@ -53,6 +55,13 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
     .orderBy(asc(smsMessage.createdAt));
 
   const corrections = await listCorrections(db, id);
+  const photos = await listConditionPhotos(db, id);
+  const canShoot = canPhotograph(session.role) && ['received', 'washing', 'ready'].includes(detail.order.status);
+  const items = await db
+    .select({ name: orderItem.name, qty: orderItem.qty })
+    .from(orderItem)
+    .where(eq(orderItem.orderId, id))
+    .orderBy(asc(orderItem.position));
   const canFix = canCorrect(session.role) && ['received', 'washing', 'ready'].includes(detail.order.status);
   const correctionLists = canFix
     ? {
@@ -111,6 +120,14 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
               {weightLabel(order.weightGrams)} · {order.method === 'band' ? 'by weight' : 'by item'}
             </dd>
           </div>
+          {order.method === 'piece' && items.length > 0 ? (
+            <div className="flex justify-between gap-3">
+              <dt className="text-stone-500">Items</dt>
+              <dd className="text-right font-medium">
+                {items.reduce((n, i) => n + i.qty, 0)}: {items.map((i) => `${i.qty} ${i.name.toLowerCase()}${i.qty > 1 ? 's' : ''}`).join(', ')}
+              </dd>
+            </div>
+          ) : null}
           <div className="flex justify-between gap-3">
             <dt className="text-stone-500">Taken</dt>
             <dd className="font-medium tabular-nums">{formatDate(order.createdAt)}</dd>
@@ -219,6 +236,38 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
           </div>
         </details>
       ) : null}
+
+      <Section title={`Condition (${photos.length})`}>
+        {photos.length === 0 ? (
+          <p className="mb-4 text-sm text-stone-500">
+            No damage recorded. If an item arrived spoiled, photograph it now, before it is washed.
+          </p>
+        ) : (
+          <ul className="mb-4 space-y-4">
+            {photos.map((p) => (
+              <li key={p.id}>
+                {/* A base64 src goes through no image optimizer, so the plain img is deliberate. */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={`data:image/jpeg;base64,${p.image}`} alt={p.note} className="max-h-72 rounded-md border border-stone-200" />
+                <p className="mt-1 text-sm text-stone-800">{p.note}</p>
+                <p className="text-xs text-stone-500">
+                  {p.staffName} · {formatDate(p.createdAt)}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
+        {canShoot ? (
+          <details className="rounded-lg border border-stone-200 bg-stone-50">
+            <summary className="flex min-h-12 cursor-pointer items-center px-4 text-sm font-semibold text-stone-700">
+              Photograph a stain
+            </summary>
+            <div className="border-t border-stone-100 p-4">
+              <ConditionCamera orderId={order.id} />
+            </div>
+          </details>
+        ) : null}
+      </Section>
 
       {history.length > 0 ? (
         <Section title="History">
