@@ -217,30 +217,9 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
         </Section>
       ) : null}
 
-      {canFix && correctionLists ? (
-        <details className="rounded-lg border border-stone-200 bg-white">
-          <summary className="flex min-h-12 cursor-pointer items-center px-4 text-sm font-semibold text-stone-700">
-            Correct this order
-          </summary>
-          <div className="border-t border-stone-100 p-4">
-            <CorrectionForm
-              order={{
-                id: order.id,
-                orderNo: order.orderNo,
-                method: order.method,
-                weightGrams: order.weightGrams,
-                gross: order.gross,
-                promisedOn: order.promisedAt ? order.promisedAt.toISOString().slice(0, 10) : '',
-              }}
-              studentPhone={student.phone}
-              locationId={location.id}
-              locations={correctionLists.locations}
-              bands={correctionLists.bands}
-            />
-          </div>
-        </details>
-      ) : null}
-
+      {/* Damage evidence sits with the bag's own moves, because the collector
+          photographs it while still standing there holding the bag — above the
+          owner-only repair form, which nobody needs before a stain is recorded. */}
       <Section title={`Condition (${photos.length})`}>
         {photos.length === 0 ? (
           <p className="mb-4 text-sm text-stone-500">
@@ -272,6 +251,30 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
           </details>
         ) : null}
       </Section>
+
+      {canFix && correctionLists ? (
+        <details className="rounded-lg border border-stone-200 bg-white">
+          <summary className="flex min-h-12 cursor-pointer items-center px-4 text-sm font-semibold text-stone-700">
+            Correct this order
+          </summary>
+          <div className="border-t border-stone-100 p-4">
+            <CorrectionForm
+              order={{
+                id: order.id,
+                orderNo: order.orderNo,
+                method: order.method,
+                weightGrams: order.weightGrams,
+                gross: order.gross,
+                promisedOn: order.promisedAt ? order.promisedAt.toISOString().slice(0, 10) : '',
+              }}
+              studentPhone={student.phone}
+              locationId={location.id}
+              locations={correctionLists.locations}
+              bands={correctionLists.bands}
+            />
+          </div>
+        </details>
+      ) : null}
 
       {history.length > 0 ? (
         <Section title="History">
