@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { eq } from 'drizzle-orm';
+import { asc, eq } from 'drizzle-orm';
 import type { PGlite } from '@electric-sql/pglite';
 import * as schema from '@/lib/db/schema';
 import { BANDS } from '@/lib/pricing';
@@ -91,6 +91,29 @@ describe('createOrder', () => {
     expect(detail?.order.gross).toBe(1600);
     expect(detail?.order.method).toBe('piece');
     expect(detail?.order.weightGrams).toBe(3500);
+  });
+
+  it('stores the piece lines in the order the counter picked them', async () => {
+    const result = await createOrder(
+      db,
+      intake({ method: 'piece', pieces: [{ code: 'TROUSER', qty: 1 }, { code: 'SHIRT', qty: 2 }] }),
+      session,
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const rows = await db.select().from(schema.orderItem).orderBy(asc(schema.orderItem.position));
+    expect(rows.map((r) => [r.code, r.qty, r.name])).toEqual([
+      ['TROUSER', 1, 'Trouser'],
+      ['SHIRT', 2, 'Shirt'],
+    ]);
+    expect(rows.every((r) => r.orderId === result.orderId)).toBe(true);
+  });
+
+  it('a band order stores no item rows; its description is the weight', async () => {
+    const result = await createOrder(db, intake(), session);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(await db.select().from(schema.orderItem)).toHaveLength(0);
   });
 
   it('refuses a bag above the price list in words, and records nothing', async () => {
@@ -243,7 +266,25 @@ describe('advanceStatus and cancelOrder', () => {
 
     const messages = await db.select().from(schema.smsMessage).orderBy(schema.smsMessage.createdAt);
     expect(messages.map((m) => m.kind)).toEqual(['accepted', 'ready']);
-    expect(messages[1]?.body).toBe(`LAWMANN: your laundry is ready for collection. Order ${created.orderNo}.`);
+    expect(messages[1]?.body).toBe(
+      `LAWMANN: your laundry is ready for delivery. 1 bag, 3.5kg. GH¢78. Order ${created.orderNo}.`,
+    );
+  });
+
+  it('the ready message lists the items of a piece-priced bag', async () => {
+    const created = await createOrder(
+      db,
+      intake({ method: 'piece', pieces: [{ code: 'SHIRT', qty: 2 }, { code: 'TROUSER', qty: 1 }] }),
+      session,
+    );
+    if (!created.ok) throw new Error('setup failed');
+    await advanceStatus(db, created.orderId, 'washing', session);
+    await advanceStatus(db, created.orderId, 'ready', session);
+
+    const messages = await db.select().from(schema.smsMessage).orderBy(schema.smsMessage.createdAt);
+    expect(messages[1]?.body).toBe(
+      `LAWMANN: your laundry is ready for delivery. 3 items: 2 shirts, 1 trouser. GH¢24. Order ${created.orderNo}.`,
+    );
   });
 
   it('a backwards move fails with the trigger’s own words', async () => {

@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, like } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, like } from 'drizzle-orm';
 import * as schema from '@/lib/db/schema';
 import type { Db, Writable } from '@/lib/db';
 import { translateDbError } from '@/lib/errors';
@@ -72,6 +72,16 @@ function pieceTotal(lines: NonNullable<IntakeInput['pieces']>): { total: Pesewas
     total += item.price * line.qty;
   }
   return { total: total as Pesewas };
+}
+
+/** The piece lines, in the order the counter picked them, for the ready message. */
+async function writeItems(db: Writable, orderId: string, lines: NonNullable<IntakeInput['pieces']>): Promise<void> {
+  const rows = lines.map((line, position) => {
+    const item = PIECES.find((p) => p.code === line.code);
+    if (!item) throw new Error(`${line.code} is not on the price list.`);
+    return { orderId, code: item.code, name: item.name, qty: line.qty, position };
+  });
+  if (rows.length > 0) await db.insert(schema.orderItem).values(rows);
 }
 
 /** Exported so a correction can resolve the right student inside its transaction. */
@@ -178,6 +188,8 @@ export async function createOrder(db: Db, input: IntakeInput, session: Session):
       const orderId = inserted[0]?.id;
       if (!orderId) throw new Error('order insert returned no row');
 
+      if (input.method === 'piece') await writeItems(db, orderId, input.pieces ?? []);
+
       let paidAllStates = 0;
       if (input.payment) {
         const pay = input.payment;
@@ -263,7 +275,22 @@ export async function advanceStatus(db: Db, orderId: string, to: OrderStatus, se
     const students = await db.select().from(schema.student).where(eq(schema.student.id, order.studentId));
     const phone = students[0]?.phone;
     if (phone) {
-      await enqueueSms(db, { shopId: session.shopId, orderId, kind: 'ready', toPhone: phone, body: readyMessage(order.orderNo) });
+      const items = await db
+        .select({ name: schema.orderItem.name, qty: schema.orderItem.qty })
+        .from(schema.orderItem)
+        .where(eq(schema.orderItem.orderId, orderId))
+        .orderBy(asc(schema.orderItem.position));
+      await enqueueSms(db, {
+        shopId: session.shopId,
+        orderId,
+        kind: 'ready',
+        toPhone: phone,
+        body: readyMessage(
+          order.orderNo,
+          { method: order.method as 'band' | 'piece', weightGrams: order.weightGrams, items },
+          order.gross as Pesewas,
+        ),
+      });
       await attemptSend(db);
     }
   }
