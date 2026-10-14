@@ -56,13 +56,17 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
 
   const corrections = await listCorrections(db, id);
   const photos = await listConditionPhotos(db, id);
-  const canShoot = canPhotograph(session.role) && ['received', 'washing', 'ready'].includes(detail.order.status);
+  // Both the repair form and the camera belong to a bag that is still here:
+  // the photograph records the state before the shop touched it, the
+  // correction moves figures the money has not yet settled.
+  const bagIsOpen = ['received', 'washing', 'ready'].includes(detail.order.status);
+  const canShoot = canPhotograph(session.role) && bagIsOpen;
   const items = await db
     .select({ name: orderItem.name, qty: orderItem.qty })
     .from(orderItem)
     .where(eq(orderItem.orderId, id))
     .orderBy(asc(orderItem.position));
-  const canFix = canCorrect(session.role) && ['received', 'washing', 'ready'].includes(detail.order.status);
+  const canFix = canCorrect(session.role) && bagIsOpen;
   const correctionLists = canFix
     ? {
         locations: await db
