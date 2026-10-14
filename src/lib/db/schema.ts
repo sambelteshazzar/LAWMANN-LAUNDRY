@@ -302,6 +302,51 @@ export const orderCorrection = pgTable(
   (t) => [index('order_correction_order').on(t.orderId, t.at)],
 );
 
+/**
+ * The lines of a piece-priced order, written once at intake. The list is a
+ * description of what was handed over, never a pricing source: the gross
+ * lives on the order and a correction that moves the price moves the
+ * message's figure and leaves this list alone. Band orders carry no rows;
+ * their description is one bag and its weight.
+ */
+export const orderItem = pgTable(
+  'order_item',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    orderId: uuid('order_id')
+      .notNull()
+      .references(() => orders.id, { onDelete: 'cascade' }),
+    code: text('code').notNull(),
+    name: text('name').notNull(),
+    qty: integer('qty').notNull(),
+    position: smallint('position').notNull(),
+  },
+  (t) => [index('order_item_order').on(t.orderId, t.position)],
+);
+
+/**
+ * Evidence that an item arrived already spoilt or stained. One base64 JPEG,
+ * downscaled in the browser before it leaves the phone, with the reason and
+ * the name of whoever took it. Written once: it is a record, not a gallery.
+ * It never reaches the student.
+ */
+export const conditionPhoto = pgTable(
+  'condition_photo',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    orderId: uuid('order_id')
+      .notNull()
+      .references(() => orders.id, { onDelete: 'cascade' }),
+    staffId: uuid('staff_id')
+      .notNull()
+      .references(() => staff.id),
+    note: text('note').notNull(),
+    image: text('image').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('condition_photo_order').on(t.orderId, t.createdAt)],
+);
+
 /** Column names this file expects, asserted against the live database at boot. */
 export const EXPECTED_COLUMNS = {
   orders: ['weight_grams', 'gross_pesewa', 'base_pesewa', 'vat_pesewa', 'nhil_pesewa', 'getfund_pesewa', 'recorded_by'],
@@ -310,6 +355,8 @@ export const EXPECTED_COLUMNS = {
   sms_message: ['kind', 'state', 'to_phone', 'body', 'sent_at'],
   order_event: ['from_status', 'to_status', 'staff_id', 'at'],
   order_correction: ['batch_id', 'field', 'from_value', 'to_value', 'note', 'at'],
+  order_item: ['order_id', 'code', 'name', 'qty', 'position'],
+  condition_photo: ['order_id', 'staff_id', 'note', 'image', 'created_at'],
 } as const satisfies Record<string, readonly string[]>;
 
 export const moneyColumn = sql`bigint`;

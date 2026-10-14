@@ -35,7 +35,7 @@ export async function freshDb(): Promise<TestDb> {
  */
 export async function resetDb(db: TestDb): Promise<void> {
   await db.$client.exec(
-    'TRUNCATE shift, operating_cost, sms_message, order_event, payment, orders, student, staff, location, shop, band RESTART IDENTITY CASCADE',
+    'TRUNCATE shift, operating_cost, sms_message, order_event, payment, orders, student, staff, location, shop, band, order_item, condition_photo RESTART IDENTITY CASCADE',
   );
 }
 
