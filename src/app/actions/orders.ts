@@ -1,9 +1,11 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { after } from 'next/server';
 import { z } from 'zod';
 import { getDb, ensureBooted } from '@/lib/db';
 import { requireSession } from '@/lib/session';
+import { attemptSend } from '@/lib/sms/outbox';
 import {
   advanceStatus,
   cancelOrder,
@@ -70,6 +72,7 @@ export async function createOrderAction(_prev: CreateOrderState, formData: FormD
   if (!result.ok) {
     return { ok: false, error: result.error, orderId: result.orderId, orderNo: result.orderNo };
   }
+  flushAfterResponse();
   revalidatePath('/app/orders');
   revalidatePath('/app/arrears');
   revalidatePath('/app/messages');
@@ -109,6 +112,24 @@ export async function lookupStudentAction(phone: string): Promise<StudentLookupR
 
 const statusSchema = z.enum(['received', 'washing', 'ready', 'collected', 'cancelled']);
 
+/**
+ * Flush the outbox after the response has gone back, not before. Every lib
+ * function records its message as queued inside its own transaction, so
+ * intent is durable the moment the row lands — which is what makes it safe to
+ * take the gateway's round trip off the counter's tap. A crash between the
+ * response and the flush costs a delay, never a message: the row stays queued
+ * and the next action's flush, or the dashboard's owed count, picks it up.
+ *
+ * The counter gives up nothing by waiting no longer, because a send failure
+ * was never reported back here: `attemptSend` swallows it and the outbox page
+ * shows the reason.
+ */
+function flushAfterResponse(): void {
+  after(async () => {
+    await attemptSend(getDb());
+  });
+}
+
 function refreshOrder(orderId: string): void {
   revalidatePath(`/app/orders/${orderId}`);
   revalidatePath('/app/orders');
@@ -131,6 +152,7 @@ export async function advanceStatusAction(_prev: ActionState, formData: FormData
   await ensureBooted();
   const result = await advanceStatus(getDb(), orderId, to.data as OrderStatus, session);
   if (!result.ok) return { ok: false, error: result.error };
+  flushAfterResponse();
   refreshOrder(orderId);
   return { ok: true };
 }
@@ -155,6 +177,7 @@ export async function takePaymentAction(_prev: ActionState, formData: FormData):
   await ensureBooted();
   const result = await takePayment(getDb(), parsed.data.orderId, parsed.data, session);
   if (!result.ok) return { ok: false, error: result.error };
+  flushAfterResponse();
   refreshOrder(parsed.data.orderId);
   return { ok: true };
 }
@@ -172,6 +195,7 @@ export async function confirmMomoAction(_prev: ActionState, formData: FormData):
   await ensureBooted();
   const result = await confirmMomoPayment(getDb(), paymentId, session);
   if (!result.ok) return { ok: false, error: result.error };
+  flushAfterResponse();
   refreshOrder(result.orderId);
   return { ok: true };
 }

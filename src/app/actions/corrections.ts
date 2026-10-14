@@ -1,9 +1,11 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { after } from 'next/server';
 import { canCorrect, correctOrder } from '@/lib/corrections';
 import { getDb, ensureBooted } from '@/lib/db';
 import { requireSession } from '@/lib/session';
+import { attemptSend } from '@/lib/sms/outbox';
 import { correctionSchema, ghsToPesewas, kgToGrams } from '@/lib/validation';
 
 export interface CorrectionState {
@@ -57,6 +59,11 @@ export async function correctOrderAction(_prev: CorrectionState, formData: FormD
   );
   if (!result.ok) return { ok: false, error: result.error };
 
+  // The amended message is queued by correctOrder inside its own transaction,
+  // so the gateway's round trip belongs after the response, not on the tap.
+  after(async () => {
+    await attemptSend(getDb());
+  });
   revalidatePath(`/app/orders/${parsed.data.orderId}`);
   revalidatePath('/app/orders');
   revalidatePath('/app/arrears');

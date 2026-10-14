@@ -8,7 +8,7 @@ import type { Grams, Pesewas } from '@/lib/money';
 import { normalizePhone, type IntakeInput, type PaymentInput } from '@/lib/validation';
 import type { Session } from '@/lib/auth';
 import { acceptedMessage, paymentMessage, readyMessage } from '@/lib/sms/templates';
-import { attemptSend, enqueueSms } from '@/lib/sms/outbox';
+import { enqueueSms } from '@/lib/sms/outbox';
 
 /**
  * The money flow: intake, status moves, payments. Every function takes the
@@ -232,7 +232,6 @@ export async function createOrder(db: Db, input: IntakeInput, session: Session):
           orderNo,
         }),
       });
-      await attemptSend(db);
       return { ok: true, orderId, orderNo };
     } catch (err) {
       const law = translateDbError(err);
@@ -291,7 +290,6 @@ export async function advanceStatus(db: Db, orderId: string, to: OrderStatus, se
           order.gross as Pesewas,
         ),
       });
-      await attemptSend(db);
     }
   }
   return { ok: true, orderId, orderNo: order.orderNo };
@@ -333,7 +331,6 @@ export async function takePayment(db: Db, orderId: string, input: PaymentInput, 
         toPhone: phone,
         body: paymentMessage(input.amount as Pesewas, order.orderNo, balance as Pesewas),
       });
-      await attemptSend(db);
     }
   }
   return { ok: true, orderId, orderNo: order.orderNo };
@@ -367,7 +364,6 @@ export async function confirmMomoPayment(db: Db, paymentId: string, session: Ses
       toPhone: phone,
       body: paymentMessage(pay.amount as Pesewas, order.orderNo, balance as Pesewas),
     });
-    await attemptSend(db);
   }
   return { ok: true, orderId: order.id, orderNo: order.orderNo };
 }

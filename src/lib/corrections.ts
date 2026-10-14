@@ -7,7 +7,7 @@ import { priceAgainstBands } from '@/lib/pricing';
 import { normalizePhone } from '@/lib/validation';
 import { moneyShort, weightLabel, type Grams, type Pesewas } from '@/lib/money';
 import { correctedMessage } from '@/lib/sms/templates';
-import { attemptSend, enqueueSms } from '@/lib/sms/outbox';
+import { enqueueSms } from '@/lib/sms/outbox';
 import { upsertStudent } from '@/lib/orders';
 import type { Session } from '@/lib/auth';
 
@@ -223,8 +223,6 @@ export async function correctOrder(
     if (law) return failure(law.message);
     throw err;
   }
-
-  await attemptSend(db);
 
   return {
     ok: true,
