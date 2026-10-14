@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { and, eq, lt, or } from 'drizzle-orm';
 import { smsMessage } from '@/lib/db/schema';
 import type { Db, Writable } from '@/lib/db';
 import { arkeselKey, sendViaArkesel } from './arkesel';
@@ -7,7 +7,8 @@ import { arkeselKey, sendViaArkesel } from './arkesel';
  * The transactional outbox. Every message is written queued before any send
  * is attempted, so intent can never be lost to a dropped network. A send is
  * attempted at action time; failures stay visible in /messages with their
- * reason and a retry button. Nothing is ever faked as sent.
+ * reason and can be sent again, by hand or on their own once they have had
+ * time to clear. Nothing is ever faked as sent.
  */
 
 export type SmsKind = 'accepted' | 'ready' | 'payment' | 'corrected';
@@ -20,6 +21,15 @@ export interface EnqueueInput {
   body: string;
 }
 
+/**
+ * A refusal is retried, but not straight away: a gateway that has just said
+ * no — a low balance, a blip — gets a few minutes to recover before it is
+ * asked again. The row's own age is the clock, so an attempt count would buy
+ * nothing. Retries only ever fire from an action taken in the app, so a
+ * permanently dead key cannot spin on its own.
+ */
+export const RETRY_AFTER_MS = 5 * 60 * 1000;
+
 export async function enqueueSms(db: Writable, input: EnqueueInput): Promise<string> {
   const rows = await db.insert(smsMessage).values(input).returning({ id: smsMessage.id });
   const id = rows[0]?.id;
@@ -29,16 +39,20 @@ export async function enqueueSms(db: Writable, input: EnqueueInput): Promise<str
 
 export async function sendQueued(db: Db, limit = 50): Promise<{ sent: number; failed: number }> {
   if (!arkeselKey()) return { sent: 0, failed: 0 };
-  const queued = await db
+  // A refusal is not a verdict. A row that failed joins the queued ones once
+  // it has had time to clear, which is what stops a single "insufficient
+  // balance" from leaving a student never told their bag is ready.
+  const readyAgain = new Date(Date.now() - RETRY_AFTER_MS);
+  const due = await db
     .select()
     .from(smsMessage)
-    .where(eq(smsMessage.state, 'queued'))
+    .where(or(eq(smsMessage.state, 'queued'), and(eq(smsMessage.state, 'failed'), lt(smsMessage.createdAt, readyAgain))))
     .orderBy(smsMessage.createdAt)
     .limit(limit);
 
   let sent = 0;
   let failed = 0;
-  for (const msg of queued) {
+  for (const msg of due) {
     const result = await sendViaArkesel(msg.toPhone, msg.body);
     if (result.ok) {
       await db

@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { getDb, ensureBooted } from '@/lib/db';
 import { smsMessage } from '@/lib/db/schema';
 import { canManageStaff, requireSession } from '@/lib/session';
@@ -106,8 +106,38 @@ export async function sendAllAction(_prev: ActionState): Promise<ActionState> {
   return { ok: true };
 }
 
-export async function deleteMessageAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+/**
+ * One refused message, sent again now. The row goes back to queued — which
+ * also clears the old reason — and the send is attempted immediately, so the
+ * counter sees the new outcome rather than hoping it worked. A message that
+ * already went out is never sent twice.
+ */
+export async function retryMessageAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   let session;
+  try {
+    session = await requireSession();
+  } catch {
+    return { ok: false, error: 'Sign in again.' };
+  }
+  if (session.role === 'collector') return { ok: false, error: 'Only the counter or owner sends messages.' };
+  const messageId = String(formData.get('messageId') ?? '');
+  if (!messageId) return { ok: false, error: 'Pick a message first.' };
+  await ensureBooted();
+  const db = getDb();
+  const rows = await db.select().from(smsMessage).where(and(eq(smsMessage.id, messageId), eq(smsMessage.shopId, session.shopId)));
+  const message = rows[0];
+  if (!message) return { ok: false, error: 'Message not found.' };
+  if (message.state === 'sent') return { ok: false, error: 'That message already went out.' };
+
+  await db.update(smsMessage).set({ state: 'queued', error: null }).where(eq(smsMessage.id, messageId));
+  const result = await sendQueued(db);
+  refreshOps();
+  if (result.sent > 0) return { ok: true };
+  const after = await db.select({ error: smsMessage.error, state: smsMessage.state }).from(smsMessage).where(eq(smsMessage.id, messageId));
+  return { ok: false, error: after[0]?.error ?? (after[0]?.state === 'failed' ? 'The gateway refused it again.' : 'The gateway is not connected.') };
+}
+
+export async function deleteMessageAction(_prev: ActionState, formData: FormData): Promise<ActionState> {  let session;
   try {
     session = await requireSession();
   } catch {
@@ -124,6 +154,12 @@ export async function deleteMessageAction(_prev: ActionState, formData: FormData
   return { ok: true };
 }
 
+/**
+ * Tidies the log of messages that already left. A refused message is not
+ * history: it is one the student is still owed, so it stays until it has been
+ * sent again. The button says "sent" because it clears sent rows and nothing
+ * else.
+ */
 export async function clearSentMessagesAction(_prev: ActionState): Promise<ActionState> {
   let session;
   try {
@@ -133,9 +169,7 @@ export async function clearSentMessagesAction(_prev: ActionState): Promise<Actio
   }
   if (!canManageStaff(session.role)) return { ok: false, error: 'Only the owner clears messages.' };
   await ensureBooted();
-  await getDb()
-    .delete(smsMessage)
-    .where(and(eq(smsMessage.shopId, session.shopId), inArray(smsMessage.state, ['sent', 'failed'])));
+  await getDb().delete(smsMessage).where(and(eq(smsMessage.shopId, session.shopId), eq(smsMessage.state, 'sent')));
   refreshOps();
   return { ok: true };
 }

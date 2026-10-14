@@ -5,7 +5,7 @@ import { smsMessage } from '@/lib/db/schema';
 import { getSession } from '@/lib/session';
 import { EmptyState, Page, PageTitle, Section, StatusBadge } from '@/components/ui';
 import { ActionForm, SecondaryButton } from '@/components/form-buttons';
-import { clearSentMessagesAction, deleteMessageAction, sendAllAction } from '@/app/actions/ops';
+import { clearSentMessagesAction, deleteMessageAction, retryMessageAction, sendAllAction } from '@/app/actions/ops';
 
 export const metadata = { title: 'Messages · Lawmann Laundry' };
 
@@ -26,13 +26,23 @@ export default async function MessagesPage() {
   await ensureBooted();
   const messages = await getDb().select().from(smsMessage).orderBy(desc(smsMessage.createdAt)).limit(100);
   const waiting = messages.filter((m) => m.state === 'queued').length;
-  const sentCount = messages.filter((m) => m.state === 'sent' || m.state === 'failed').length;
+  // Refused rows are not history: they are a message the student is still owed,
+  // so they are counted apart from the ones that already left.
+  const refused = messages.filter((m) => m.state === 'failed').length;
+  const finishedCount = messages.filter((m) => m.state === 'sent').length;
   const isOwner = session.role === 'owner';
   const configured = !!process.env.ARKESEL_API_KEY;
 
   return (
     <Page>
-      <PageTitle title="Messages" hint="What each student was told, and whether it left the phone." />
+      <PageTitle
+        title="Messages"
+        hint={
+          refused > 0
+            ? `${refused} ${refused === 1 ? 'message was' : 'messages were'} refused and ${refused === 1 ? 'is' : 'are'} still owed. Send them again from the row below.`
+            : 'What each student was told, and whether it left the phone.'
+        }
+      />
       {!configured ? (
         <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-4">
           <p className="text-sm font-semibold text-amber-900">SMS gateway not connected</p>
@@ -53,11 +63,11 @@ export default async function MessagesPage() {
           </ActionForm>
         </div>
       ) : null}
-      {isOwner && sentCount > 0 ? (
+      {isOwner && finishedCount > 0 ? (
         <div className="mb-4">
           <ActionForm action={clearSentMessagesAction}>
             <SecondaryButton>
-              Clear {sentCount} sent {sentCount === 1 ? 'message' : 'messages'}
+              Clear {finishedCount} sent {finishedCount === 1 ? 'message' : 'messages'}
             </SecondaryButton>
           </ActionForm>
         </div>
@@ -76,6 +86,14 @@ export default async function MessagesPage() {
                   <span>{formatDate(m.createdAt)}</span>
                   {m.state === 'failed' && m.error ? <span className="text-red-700">{m.error}</span> : null}
                 </p>
+                {m.state === 'failed' ? (
+                  <div className="mt-2 w-36">
+                    <ActionForm action={retryMessageAction}>
+                      <input type="hidden" name="messageId" value={m.id} />
+                      <SecondaryButton>Send again</SecondaryButton>
+                    </ActionForm>
+                  </div>
+                ) : null}
                 {isOwner ? (
                   <div className="mt-2 w-32">
                     <ActionForm action={deleteMessageAction}>

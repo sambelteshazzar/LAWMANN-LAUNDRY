@@ -11,7 +11,7 @@ import {
   paymentMessage,
   readyMessage,
 } from '@/lib/sms/templates';
-import { enqueueSms, sendQueued, attemptSend } from '@/lib/sms/outbox';
+import { RETRY_AFTER_MS, enqueueSms, sendQueued, attemptSend } from '@/lib/sms/outbox';
 import { freshDb, resetDb, seededShop, type ShopFixture, type TestDb } from './db';
 
 describe('templates', () => {
@@ -170,5 +170,107 @@ describe('outbox', () => {
     const rows = await db.select().from(schema.smsMessage).where(eq(schema.smsMessage.id, id));
     expect(rows[0]?.state).toBe('failed');
     expect(rows[0]?.error).toContain('unreachable');
+  });
+});
+
+/**
+ * A refusal is not the end of a message. These prove the two halves of that:
+ * a fresh failure waits its turn rather than hammering a gateway that just
+ * said no, and an aged one is picked up again, with its reason left behind.
+ */
+
+describe('outbox retries', () => {
+  let client: PGlite;
+  let db: TestDb;
+  let fx: ShopFixture;
+
+  /** A row already sitting in the outbox, in a given state and at a given age. */
+  const seeded = async (state: 'queued' | 'failed', minutesAgo: number, error: string | null = null) => {
+    const rows = await db
+      .insert(schema.smsMessage)
+      .values({
+        shopId: fx.shopId,
+        orderId: null,
+        kind: 'ready',
+        toPhone: '0241234567',
+        body: 'LAWMANN: your laundry is ready for delivery. Order LW-261014-009.',
+        state,
+        error,
+        createdAt: new Date(Date.now() - minutesAgo * 60 * 1000),
+      })
+      .returning();
+    return rows[0]!;
+  };
+
+  const gatewayOk = () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ status: 'success', data: { id: 'ark-retry' } }), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    return fetchMock;
+  };
+
+  beforeAll(async () => {
+    db = await freshDb();
+    client = db.$client;
+  });
+
+  beforeEach(async () => {
+    await resetDb(db);
+    fx = await seededShop(db, client);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
+
+  afterAll(async () => {
+    await client.close();
+  });
+
+  it('a fresh failure waits its turn instead of hammering the gateway', async () => {
+    vi.stubEnv('ARKESEL_API_KEY', 'test-key');
+    const fetchMock = gatewayOk();
+    await seeded('failed', 1, 'Insufficient balance');
+
+    expect(await sendQueued(db)).toEqual({ sent: 0, failed: 0 });
+    expect(fetchMock).not.toHaveBeenCalled();
+    const rows = await db.select().from(schema.smsMessage);
+    expect(rows[0]?.state).toBe('failed');
+    expect(rows[0]?.error).toBe('Insufficient balance');
+  });
+
+  it('an aged failure is sent again, and its reason is left behind', async () => {
+    vi.stubEnv('ARKESEL_API_KEY', 'test-key');
+    gatewayOk();
+    const row = await seeded('failed', RETRY_AFTER_MS / 60000 + 1, 'Insufficient balance');
+
+    expect(await sendQueued(db)).toEqual({ sent: 1, failed: 0 });
+    const rows = await db.select().from(schema.smsMessage).where(eq(schema.smsMessage.id, row.id));
+    expect(rows[0]?.state).toBe('sent');
+    expect(rows[0]?.error).toBeNull();
+    expect(rows[0]?.providerRef).toBe('ark-retry');
+    expect(rows[0]?.sentAt).not.toBeNull();
+  });
+
+  it('an aged failure refused a second time keeps its reason and stays owed', async () => {
+    vi.stubEnv('ARKESEL_API_KEY', 'test-key');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(JSON.stringify({ status: 'error', message: 'Still insufficient balance' }), { status: 200 })),
+    );
+    const row = await seeded('failed', 10, 'Insufficient balance');
+
+    expect(await sendQueued(db)).toEqual({ sent: 0, failed: 1 });
+    const rows = await db.select().from(schema.smsMessage).where(eq(schema.smsMessage.id, row.id));
+    expect(rows[0]?.state).toBe('failed');
+    expect(rows[0]?.error).toContain('Still insufficient balance');
+  });
+
+  it('a waiting message is sent at once, unaffected by the retry window', async () => {
+    vi.stubEnv('ARKESEL_API_KEY', 'test-key');
+    gatewayOk();
+    await seeded('queued', 0);
+
+    expect(await sendQueued(db)).toEqual({ sent: 1, failed: 0 });
   });
 });
