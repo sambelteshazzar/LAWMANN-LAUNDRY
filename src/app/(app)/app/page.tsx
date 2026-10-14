@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getDb, ensureBooted } from '@/lib/db';
 import { getSession } from '@/lib/session';
-import { arrearsList, intakeCounts, moneyToday, statusCounts } from '@/lib/reports';
+import { arrearsList, intakeCounts, moneyToday, statusCounts, undeliveredMessages } from '@/lib/reports';
 import { currentShift } from '@/lib/shifts';
 import { listCosts } from '@/lib/costs';
 import { EmptyState, Money, Page, Section, Stat, StatCard, StatusBadge, ageLabel } from '@/components/ui';
@@ -26,18 +26,22 @@ export default async function DashboardPage() {
   await ensureBooted();
   const db = getDb();
   const now = new Date();
-  const [money, counts, statuses, arrears, shift] = await Promise.all([
+  const [money, counts, statuses, arrears, shift, messagesOwed] = await Promise.all([
     moneyToday(db, session.shopId, now),
     intakeCounts(db, session.shopId, now),
     statusCounts(db, session.shopId),
     arrearsList(db, session.shopId),
     currentShift(db, session.shopId),
+    undeliveredMessages(db, session.shopId, now),
   ]);
   const weekStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - ((now.getUTCDay() + 6) % 7)));
   const weekCosts = await listCosts(db, session.shopId, weekStart, now);
   const weekCostsTotal = weekCosts.reduce((acc, c) => acc + c.amount, 0);
   const owingTotal = arrears.reduce((acc, a) => acc + a.balancePesewa, 0);
   const topArrears = arrears.slice(0, 5);
+  // A student who was never told is a bag nobody comes to collect, so this
+  // leads the page whenever one is outstanding.
+  const refused = messagesOwed.refused > 0;
 
   return (
     <Page>
@@ -47,6 +51,24 @@ export default async function DashboardPage() {
           {now.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
         </p>
       </div>
+
+      {messagesOwed.total > 0 ? (
+        <Link
+          href="/app/messages"
+          className={`mb-4 block rounded-lg border p-4 ${
+            refused ? 'border-red-300 bg-red-50' : 'border-amber-300 bg-amber-50'
+          }`}
+        >
+          <p className={`text-sm font-semibold ${refused ? 'text-red-900' : 'text-amber-900'}`}>
+            {messagesOwed.total} {messagesOwed.total === 1 ? 'student has' : 'students have'} not been told
+          </p>
+          <p className={`mt-1 text-sm ${refused ? 'text-red-800' : 'text-amber-800'}`}>
+            {messagesOwed.refused > 0
+              ? `${messagesOwed.refused} refused by the gateway. Send them again from Messages.`
+              : 'Still waiting to go out. Check the gateway key on Messages.'}
+          </p>
+        </Link>
+      ) : null}
 
       <div className="mb-4 grid grid-cols-2 gap-3">
         <Stat

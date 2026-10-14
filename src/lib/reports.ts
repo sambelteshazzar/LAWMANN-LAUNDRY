@@ -1,8 +1,9 @@
-import { and, eq, gte, inArray, lte, sql } from 'drizzle-orm';
+import { and, eq, gte, lte, lt, sql, type SQL } from 'drizzle-orm';
 import * as schema from '@/lib/db/schema';
 import type { Db } from '@/lib/db';
 import type { Grams, Pesewas } from '@/lib/money';
 import { gapRowLabel } from '@/lib/pricing';
+import { RETRY_AFTER_MS } from '@/lib/sms/outbox';
 
 /**
  * The owner's six questions plus the profit side, as queries. Two standing
@@ -30,6 +31,20 @@ export interface IntakeCounts {
   day: number;
   week: number;
   month: number;
+}
+
+/**
+ * The messages a student is still owed. The shop's whole promise is an SMS
+ * at every step, so a message that never left is a bag nobody comes to
+ * collect — which is why the dashboard counts them rather than leaving them
+ * for someone to find in the outbox.
+ */
+export interface UndeliveredMessages {
+  /** The gateway refused them. They need a human to send them again. */
+  refused: number;
+  /** Waiting past the window the outbox uses, so a flush was missed. */
+  waiting: number;
+  total: number;
 }
 
 export interface ArrearsRow {
@@ -148,6 +163,26 @@ export async function statusCounts(db: Db, shopId: string): Promise<Record<strin
   const out: Record<string, number> = {};
   for (const row of rows) out[row.status] = Number(row.count);
   return out;
+}
+
+async function countSms(db: Db, shopId: string, extra: SQL | undefined): Promise<number> {
+  const rows = await db
+    .select({ count: sql<string | number>`count(*)` })
+    .from(schema.smsMessage)
+    .where(and(eq(schema.smsMessage.shopId, shopId), extra));
+  return Number(rows[0]?.count ?? 0);
+}
+
+export async function undeliveredMessages(db: Db, shopId: string, now: Date): Promise<UndeliveredMessages> {
+  // The outbox's own window, imported rather than restated, so the dashboard
+  // and the sender agree on what "overdue" means. A message queued longer
+  // ago than this has missed its flush, which is nearly always a missing key.
+  const overdue = new Date(now.getTime() - RETRY_AFTER_MS);
+  const [refused, waiting] = await Promise.all([
+    countSms(db, shopId, eq(schema.smsMessage.state, 'failed')),
+    countSms(db, shopId, and(eq(schema.smsMessage.state, 'queued'), lt(schema.smsMessage.createdAt, overdue))),
+  ]);
+  return { refused, waiting, total: refused + waiting };
 }
 
 interface ArrearsQueryRow {

@@ -16,6 +16,7 @@ import {
   revenueInRange,
   statusCounts,
   taxSummary,
+  undeliveredMessages,
 } from '@/lib/reports';
 import { activityFeed } from '@/lib/activity';
 import { costSchema } from '@/lib/validation';
@@ -248,5 +249,60 @@ describe('activityFeed', () => {
 
     const august = await activityFeed(db, fx.shopId, { day: new Date('2026-08-15T00:00:00Z') });
     expect(august.map((f) => f.kind)).toEqual(['order']);
+  });
+});
+
+/**
+ * The dashboard's "students have not been told" count. It exists because a
+ * message that never left is a bag nobody comes to collect, so it must see
+ * both refusals and a flush that silently never happened.
+ */
+describe('undeliveredMessages', () => {
+  // The shared fixture ships one queued SMS from 09:01, which by noon is past
+  // its send window. These tests own the outbox, so it starts empty.
+  beforeEach(async () => {
+    await db.delete(schema.smsMessage);
+  });
+
+  const sms = (overrides: Partial<typeof schema.smsMessage.$inferInsert>) =>
+    db.insert(schema.smsMessage).values({
+      shopId: fx.shopId,
+      orderId: null,
+      kind: 'ready',
+      toPhone: '0241234567',
+      body: 'LAWMANN: your laundry is ready for delivery.',
+      state: 'queued',
+      createdAt: NOW,
+      ...overrides,
+    });
+
+  it('counts nothing when every message left on time', async () => {
+    await sms({ state: 'sent', sentAt: NOW });
+    expect(await undeliveredMessages(db, fx.shopId, NOW)).toEqual({ refused: 0, waiting: 0, total: 0 });
+  });
+
+  it('counts a refusal as owed, whatever its age', async () => {
+    await sms({ state: 'failed', error: 'Insufficient balance', createdAt: NOW });
+    await sms({ state: 'failed', error: 'Insufficient balance', createdAt: new Date('2026-09-01T00:00:00Z') });
+    expect(await undeliveredMessages(db, fx.shopId, NOW)).toEqual({ refused: 2, waiting: 0, total: 2 });
+  });
+
+  it('leaves a message that is still inside its send window alone', async () => {
+    // Two minutes old: the outbox has not had its chance to flush it yet, so
+    // a counter taking a bag must not be told a message is stuck.
+    await sms({ state: 'queued', createdAt: new Date(NOW.getTime() - 2 * 60 * 1000) });
+    expect(await undeliveredMessages(db, fx.shopId, NOW)).toEqual({ refused: 0, waiting: 0, total: 0 });
+  });
+
+  it('counts a message waiting past the send window as owed', async () => {
+    await sms({ state: 'queued', createdAt: new Date(NOW.getTime() - 10 * 60 * 1000) });
+    expect(await undeliveredMessages(db, fx.shopId, NOW)).toEqual({ refused: 0, waiting: 1, total: 1 });
+  });
+
+  it('adds the two kinds together', async () => {
+    await sms({ state: 'failed', error: 'Insufficient balance', createdAt: NOW });
+    await sms({ state: 'queued', createdAt: new Date(NOW.getTime() - 10 * 60 * 1000) });
+    await sms({ state: 'sent', sentAt: NOW });
+    expect(await undeliveredMessages(db, fx.shopId, NOW)).toEqual({ refused: 1, waiting: 1, total: 2 });
   });
 });
