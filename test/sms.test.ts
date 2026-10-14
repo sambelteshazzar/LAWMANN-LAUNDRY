@@ -26,11 +26,38 @@ describe('templates', () => {
     expect(body).toContain('bag received for you.');
   });
 
-  it('ready and payment messages say exactly what the proposal promises', () => {
-    expect(readyMessage('LW-260928-003')).toBe('LAWMANN: your laundry is ready for collection. Order LW-260928-003.');
+  it('the payment message says exactly what the proposal promises', () => {
     expect(paymentMessage(pesewas(5000), 'LW-260928-003', pesewas(4300))).toBe(
       'LAWMANN: GH¢50 received for LW-260928-003. Balance owing GH¢43.',
     );
+  });
+
+  it('the ready message names the items, how many, and the price', () => {
+    expect(
+      readyMessage('LW-261014-001', { method: 'band', weightGrams: grams(3500), items: [] }, pesewas(7800)),
+    ).toBe('LAWMANN: your laundry is ready for delivery. 1 bag, 3.5kg. GH¢78. Order LW-261014-001.');
+    expect(
+      readyMessage(
+        'LW-261014-002',
+        { method: 'piece', weightGrams: grams(3500), items: [{ name: 'Shirt', qty: 2 }, { name: 'Trouser', qty: 1 }] },
+        pesewas(2400),
+      ),
+    ).toBe('LAWMANN: your laundry is ready for delivery. 3 items: 2 shirts, 1 trouser. GH¢24. Order LW-261014-002.');
+    expect(
+      readyMessage(
+        'LW-261014-003',
+        { method: 'piece', weightGrams: grams(3500), items: [{ name: 'Bedsheet', qty: 1 }] },
+        pesewas(2000),
+      ),
+    ).toBe('LAWMANN: your laundry is ready for delivery. 1 item: 1 bedsheet. GH¢20. Order LW-261014-003.');
+  });
+
+  it('a long item list is truncated, never a second segment', () => {
+    const items = Array.from({ length: 30 }, () => ({ name: 'Bedsheet', qty: 1 }));
+    const body = readyMessage('LW-261014-004', { method: 'piece', weightGrams: grams(3500), items }, pesewas(60000));
+    expect(body.length).toBeLessThanOrEqual(SMS_SEGMENT_LIMIT);
+    expect(body).toContain('ready for delivery');
+    expect(body).toContain('Order LW-261014-004.');
   });
 
   it('a corrected message names the order, the new figure, and the balance', () => {
@@ -54,7 +81,12 @@ describe('templates', () => {
         (name, weight, paid) => {
           const bodies = [
             acceptedMessage({ name, weightGrams: grams(weight), grossPesewa: pesewas(9300), paidAllStatesPesewa: pesewas(paid), orderNo: 'LW-260928-003' }),
-            readyMessage('LW-260928-003'),
+            readyMessage('LW-260928-003', { method: 'band', weightGrams: grams(3500), items: [] }, pesewas(7800)),
+            readyMessage(
+              'LW-260928-003',
+              { method: 'piece', weightGrams: grams(3500), items: [{ name: 'Bedsheet', qty: 9 }, { name: '2-piece suit', qty: 3 }] },
+              pesewas(27000),
+            ),
             paymentMessage(pesewas(5000), 'LW-260928-003', pesewas(4300)),
             correctedMessage('LW-260928-003', '2.9kg', pesewas(7300), pesewas(4300)),
           ];

@@ -1,9 +1,9 @@
 import { moneyShort, weightLabel, type Grams, type Pesewas } from '@/lib/money';
 
 /**
- * The three messages the proposal promises: bag accepted, ready for
- * collection, payment received. Every template is a single SMS segment
- * (SMS_SEGMENT_LIMIT): each extra segment costs the owner ~GH¢0.022, so
+ * The messages the proposal promises: bag accepted, ready for
+ * delivery, payment received, order corrected. Every template is a single SMS
+ * segment (SMS_SEGMENT_LIMIT): each extra segment costs the owner ~GH¢0.022, so
  * length is a design constraint, not a suggestion.
  *
  * Figures come from integer pesewas through moneyShort. No toFixed, no
@@ -31,8 +31,50 @@ export function acceptedMessage(input: AcceptedMessageInput): string {
   );
 }
 
-export function readyMessage(orderNo: string): string {
-  return `LAWMANN: your laundry is ready for collection. Order ${orderNo}.`;
+export interface ReadyOrder {
+  readonly method: 'band' | 'piece';
+  readonly weightGrams: Grams;
+  readonly items: ReadonlyArray<{ name: string; qty: number }>;
+}
+
+/** "2 shirts", "1 bedsheet", "1 2-piece suit". The plural is a plain s. */
+function itemLabel(name: string, qty: number): string {
+  const word = name.toLowerCase();
+  return `${qty} ${word}${qty > 1 ? 's' : ''}`;
+}
+
+/** "1 bag, 3.5kg" for a weighed bag; "3 items: 2 shirts, 1 trouser" for a counted one. */
+function whatIsReady(order: ReadyOrder): string {
+  if (order.items.length === 0) return `1 bag, ${weightLabel(order.weightGrams)}`;
+  const count = order.items.reduce((n, i) => n + i.qty, 0);
+  return `${count} ${count === 1 ? 'item' : 'items'}: ${order.items.map((i) => itemLabel(i.name, i.qty)).join(', ')}`;
+}
+
+/**
+ * The ready text, in the owner's words: "your laundry is ready for delivery",
+ * then what is in the bag and what it costs. The order number closes, because
+ * that is the thing the student copied down at intake.
+ *
+ * A weighed bag has no item list, so it is described as one bag and its
+ * weight, which is the honest description. A long counted list is dropped to
+ * its first lines until the body fits one segment: each extra segment costs
+ * the owner money, so length is a design constraint, not a suggestion.
+ */
+export function readyMessage(orderNo: string, order: ReadyOrder, grossPesewa: Pesewas): string {
+  const head = `LAWMANN: your laundry is ready for delivery.`;
+  const price = ` ${moneyShort(grossPesewa)}. Order ${orderNo}.`;
+  const what = whatIsReady(order);
+
+  const full = `${head} ${what}.${price}`;
+  if (full.length <= SMS_SEGMENT_LIMIT || order.items.length === 0) return full;
+
+  const lines = [...order.items];
+  while (lines.length > 0) {
+    lines.pop();
+    const shorter = `${head} ${whatIsReady({ ...order, items: lines })}.${price}`;
+    if (shorter.length <= SMS_SEGMENT_LIMIT) return shorter;
+  }
+  return `${head}${price}`;
 }
 
 export function paymentMessage(amountPesewa: Pesewas, orderNo: string, balancePesewa: Pesewas): string {
