@@ -138,6 +138,19 @@ export const correctionSchema = z.object({
 });
 export type CorrectionInputForm = z.infer<typeof correctionSchema>;
 
+/**
+ * The photograph of an item that arrived already spoiled. The note is what
+ * makes it evidence rather than a snapshot, so it is required; the image is
+ * base64 the browser has already downscaled, and the size cap is the lib's
+ * job because it owns the column.
+ */
+export const conditionPhotoSchema = z.object({
+  orderId: z.string().uuid(),
+  note: z.string().trim().min(3, 'Say what is wrong with the item.').max(120),
+  image: z.string().min(1, 'Take the photograph first.'),
+});
+export type ConditionPhotoInputForm = z.infer<typeof conditionPhotoSchema>;
+
 export const COST_CATEGORIES = [
   'gas',
   'electricity',

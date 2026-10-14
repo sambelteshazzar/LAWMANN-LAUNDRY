@@ -245,7 +245,7 @@ async function main(): Promise<void> {
             orderId: order.id,
             kind: 'ready',
             toPhone: student.phone,
-            body: readyMessage(order.orderNo),
+            body: readyMessage(order.orderNo, { method: 'band', weightGrams: grams(weight), items: [] }, gross),
             state: 'queued',
             createdAt: at(day, 15),
           });
